@@ -1,0 +1,36 @@
+[workspace]
+resolver = "3"
+members = ["loveletters_bin", "loveletters_lib"]
+
+[workspace.package]
+authors = ["90degs2infty <90degs2infty@posteo.org>"]
+categories = []
+documentation = ""
+description = "A static site generator powered by typst"
+edition = "2024"
+homepage = "https://github.com/90degs2infty/loveletters"
+keywords = []
+license = "MIT OR Apache-2.0"
+publish = false
+readme = "README.md"
+repository = "https://github.com/90degs2infty/loveletters"
+version = "0.1.0"
+
+[workspace.dependencies]
+loveletters_lib = { path = "./loveletters_lib" }
+
+[workspace.lints.rust]
+missing_docs = { level = "warn", priority = 0 }
+
+[workspace.lints.rustdoc]
+missing_crate_level_docs = { level = "warn", priority = 1 }
+unescaped_backticks = { level = "warn", priority = 1 }
+
+[workspace.lints.clippy]
+cargo = { level = "warn", priority = 2 }
+all = { level = "warn", priority = 3 }
+pedantic = { level = "warn", priority = 4 }
+absolute_paths = { level = "warn", priority = 5 }
+# Whitelist some specific lints
+# - clippy::module_name_repetitions: I struggle to come up with non-repetitive, meaningful names
+module_name_repetitions = { level = "allow", priority = 5 }
