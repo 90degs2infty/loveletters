@@ -17,7 +17,13 @@ repository = "https://github.com/90degs2infty/loveletters"
 version = "0.1.0"
 
 [workspace.dependencies]
+anyhow = "1.0.100"
+clap = "4.5.51"
 loveletters_lib = { path = "./loveletters_lib" }
+serde = "1.0.228"
+tokio = "1.48.0"
+toml = "0.9.8"
+walkdir = "2.5.0"
 
 [workspace.lints.rust]
 missing_docs = { level = "warn", priority = 0 }
