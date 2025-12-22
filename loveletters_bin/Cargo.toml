@@ -16,10 +16,8 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 clap = { workspace = true, features = ["derive"] }
-serde = { workspace = true, features = ["derive"] }
+loveletters_lib.workspace = true
 tokio = { workspace = true, features = ["full"] }
-toml.workspace = true
-walkdir.workspace = true
 
 [lints]
 workspace = true
