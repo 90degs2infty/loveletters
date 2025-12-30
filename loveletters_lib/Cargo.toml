@@ -19,7 +19,7 @@ const_format.workspace = true
 serde = { workspace = true, features = ["derive"] }
 tar.workspace = true
 thiserror.workspace = true
-time.workspace = true
+time = { workspace = true, features = ["serde", "parsing"] }
 toml.workspace = true
 typst.workspace = true
 typst-html.workspace = true
