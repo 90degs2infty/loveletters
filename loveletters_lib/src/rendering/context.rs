@@ -8,6 +8,7 @@ use crate::{
     slug::Slug,
 };
 
+// TODO builder pattern?
 #[derive(Debug, Clone)]
 pub struct GlobalContext {
     content: Dict,
@@ -34,9 +35,11 @@ impl IntoValue for GlobalContext {
     }
 }
 
+// TODO builder pattern?
 pub struct PageContext<'a> {
     section_path: &'a [Slug],
     page: Option<&'a Slug>,
+    frontmatter: Value,
 }
 
 impl<'a> PageContext<'a> {
@@ -44,23 +47,37 @@ impl<'a> PageContext<'a> {
         Self {
             section_path: path,
             page,
+            frontmatter: Value::None,
         }
+    }
+
+    pub fn with_frontmatter<F: IntoValue>(&mut self, frontmatter: F) -> &mut Self {
+        self.frontmatter = frontmatter.into_value();
+        self
     }
 }
 
 impl<'a> IntoValue for PageContext<'a> {
     fn into_value(self) -> Value {
+        let Self {
+            section_path,
+            page,
+            frontmatter,
+        } = self;
         let mut d = Dict::new();
-        let path: Vec<_> = self
-            .section_path
+
+        let path: Vec<_> = section_path
             .iter()
             .map(|s| Value::Str(Str::from(s.as_str())))
             .collect();
         d.insert("path".into(), Value::Array(path.as_slice().into()));
 
-        if let Some(page) = self.page {
+        if let Some(page) = page {
             d.insert("page".into(), Value::Str(page.as_str().into()));
         }
+
+        d.insert("frontmatter".into(), frontmatter);
+
         d.into_value()
     }
 }

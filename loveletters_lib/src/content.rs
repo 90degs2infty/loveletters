@@ -21,6 +21,13 @@ impl IndexFrontmatter {
     }
 }
 
+impl IntoValue for IndexFrontmatter {
+    fn into_value(self) -> Value {
+        self.to_typst()
+    }
+}
+
+// TODO: should rather be a custom trait ToValue?
 impl<'a> IntoValue for &'a IndexFrontmatter {
     fn into_value(self) -> Value {
         self.to_typst()
@@ -45,6 +52,13 @@ impl LeafFrontmatter {
     }
 }
 
+impl IntoValue for LeafFrontmatter {
+    fn into_value(self) -> Value {
+        self.to_typst()
+    }
+}
+
+// TODO: should rather be a custom trait ToValue?
 impl<'a> IntoValue for &'a LeafFrontmatter {
     fn into_value(self) -> Value {
         self.to_typst()

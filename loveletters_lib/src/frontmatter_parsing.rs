@@ -51,19 +51,21 @@ where
 }
 
 impl<M, F> PageWithFrontmatter<M, F> {
-    pub fn try_render(self, renderer: &Renderer, ctx: PageContext) -> Result<RenderedPage<M>>
+    pub fn try_render(self, renderer: &Renderer, mut ctx: PageContext) -> Result<RenderedPage<M>>
     where
         M: Mode,
+        F: IntoValue,
     {
+        ctx.with_frontmatter(self.frontmatter);
         renderer.try_render_dir(self.content_dir, ctx)
     }
 }
 
-impl<'a, M, F> IntoValue for &'a PageWithFrontmatter<M, F>
+impl<M, F> PageWithFrontmatter<M, F>
 where
     for<'b> &'b F: IntoValue,
 {
-    fn into_value(self) -> Value {
+    pub fn to_typst(&self) -> Value {
         let PageWithFrontmatter {
             slug: _,
             content_dir: _,
@@ -73,7 +75,16 @@ where
 
         let mut d = Dict::new();
         d.insert("frontmatter".into(), frontmatter.into_value());
-        Value::Dict(d)
+        d.into_value()
+    }
+}
+
+impl<'a, M, F> IntoValue for &'a PageWithFrontmatter<M, F>
+where
+    for<'b> &'b F: IntoValue,
+{
+    fn into_value(self) -> Value {
+        self.to_typst()
     }
 }
 
