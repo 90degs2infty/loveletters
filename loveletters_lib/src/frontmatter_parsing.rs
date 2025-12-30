@@ -7,10 +7,16 @@ use crate::{
     discovery::DiscoveredPage,
     error::Result,
     page::Mode,
-    rendering::{RenderedPage, context::Context},
+    rendering::{RenderedPage, Renderer, context::PageContext},
     section::Section,
     slug::Slug,
 };
+
+// TODO Instead of having a page with frontmatter, it might be more helpful to have a page with
+// (page-specific/page-local) context instead.
+// Then, make sure that the project-global content tree captures the same context per page as the
+// (yet to implement) convenience accessor to page-local context (the one accessible via e.g.
+// `#loveletters.page` or similar).
 
 pub struct PageWithFrontmatter<M, F> {
     // TODO drop
@@ -45,11 +51,11 @@ where
 }
 
 impl<M, F> PageWithFrontmatter<M, F> {
-    pub fn try_render(self, ctx: Context) -> Result<RenderedPage<M>>
+    pub fn try_render(self, renderer: &Renderer, ctx: PageContext) -> Result<RenderedPage<M>>
     where
         M: Mode,
     {
-        RenderedPage::try_render(self.slug, self.content_dir, M::typst_filename().into(), ctx)
+        renderer.try_render_dir(self.content_dir, ctx)
     }
 }
 

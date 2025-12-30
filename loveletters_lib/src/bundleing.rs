@@ -44,6 +44,7 @@ impl PageBundle {
     }
 
     pub fn write_to_disk(self) -> Result<()> {
+        ensure_exists(&self.bundle_dir)?;
         self.index.write_to(&self.bundle_dir.join("index.html"))
     }
 }

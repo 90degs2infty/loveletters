@@ -8,63 +8,40 @@ use crate::{
     driver_typst::TypstEngine,
     error::Result,
     frontmatter_parsing::PageWithFrontmatter,
-    page::{Index, Leaf},
-    rendering::context::Context,
+    page::{Index, Leaf, Mode},
+    rendering::context::{GlobalContext, PageContext},
     section::Section,
-    slug::Slug,
-    utils::ensure_exists,
 };
+use typst_html::HtmlDocument;
 
 pub struct RenderedPage<M> {
-    // TODO drop
-    slug: Slug,
     content_dir: PathBuf,
-    rendering: String,
+    rendering: HtmlDocument,
     m: PhantomData<M>,
 }
 
 impl<M> RenderedPage<M> {
-    pub fn try_render(
-        slug: Slug,
-        content_dir: PathBuf,
-        root_file: PathBuf,
-        ctx: Context,
-    ) -> Result<Self> {
-        // TODO: should probably be something like
-        // let engine = TypstEngine::new();
-        // let entrypoint = engine.wrap(&self);
-        // or similar...
-        let entrypoint = TypstEngine::new(content_dir.clone(), root_file, ctx);
-        let typst_document = typst::compile(&entrypoint)
-            .output
-            .expect("Failed to compile post using typst");
-        let html = typst_html::html(&typst_document).expect("Failed to export document to HTML.");
-        Ok(Self {
-            slug,
+    pub fn new(content_dir: PathBuf, rendering: HtmlDocument) -> Self {
+        Self {
             content_dir,
-            rendering: html,
+            rendering,
             m: PhantomData,
-        })
-    }
-
-    pub fn slug(&self) -> &Slug {
-        &self.slug
+        }
     }
 
     pub fn try_bundle(self, output_dir: PathBuf) -> Result<PageBundle> {
-        ensure_exists(&output_dir)?;
-        Ok(PageBundle::new(
-            output_dir,
-            InMemFile::new(self.rendering.into()),
-        ))
+        let html = typst_html::html(&self.rendering).expect("Failed to export document to HTML.");
+        Ok(PageBundle::new(output_dir, InMemFile::new(html.into())))
     }
 }
 
-pub struct Renderer {}
+pub struct Renderer {
+    ctx: GlobalContext,
+}
 
 impl Renderer {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(ctx: GlobalContext) -> Self {
+        Self { ctx }
     }
 
     pub fn try_render(
@@ -74,17 +51,36 @@ impl Renderer {
             PageWithFrontmatter<Leaf, LeafFrontmatter>,
         >,
     ) -> Result<Section<RenderedPage<Index>, RenderedPage<Leaf>>> {
-        let tree = content.to_typst();
-
         content.try_walk(
             |path, page| {
-                let ctx = Context::new(tree.clone(), path, None);
-                page.try_render(ctx)
+                let ctx = PageContext::new(path, None);
+                page.try_render(&self, ctx)
             },
             |path, slug, page| {
-                let ctx = Context::new(tree.clone(), path, Some(slug));
-                page.try_render(ctx)
+                let ctx = PageContext::new(path, Some(slug));
+                page.try_render(&self, ctx)
             },
         )
+    }
+
+    pub fn try_render_dir<M>(
+        &self,
+        content_dir: PathBuf,
+        page_ctx: PageContext,
+    ) -> Result<RenderedPage<M>>
+    where
+        M: Mode,
+    {
+        // TODO: should probably be something like
+        // let engine = TypstEngine::new();
+        // let entrypoint = engine.wrap(&self);
+        // or similar...
+        let root_file = M::typst_filename().into();
+        let entrypoint =
+            TypstEngine::new(content_dir.clone(), root_file, self.ctx.clone(), page_ctx);
+        let typst_document = typst::compile(&entrypoint)
+            .output
+            .expect("Failed to compile post using typst");
+        Ok(RenderedPage::new(content_dir, typst_document))
     }
 }

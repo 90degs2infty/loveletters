@@ -1,32 +1,56 @@
 use typst::foundations::{Dict, IntoValue, Str, Value};
 
-use crate::slug::Slug;
+use crate::{
+    content::{IndexFrontmatter, LeafFrontmatter},
+    frontmatter_parsing::PageWithFrontmatter,
+    page::{Index, Leaf},
+    section::Section,
+    slug::Slug,
+};
 
-// TODO implement this properly...
-// probably, it is more useful to have a global context (which captures e.g. config, the content tree etc.)
-// and a page-local one (which captures front-matter, section_path, page etc.) and pass both individually
-// to the rendering business logic.
-// TODO frontmatter
-pub struct Context<'a> {
-    tree: Dict,
+#[derive(Debug, Clone)]
+pub struct GlobalContext {
+    content: Dict,
+}
+
+impl GlobalContext {
+    pub fn new(
+        content: &Section<
+            PageWithFrontmatter<Index, IndexFrontmatter>,
+            PageWithFrontmatter<Leaf, LeafFrontmatter>,
+        >,
+    ) -> Self {
+        Self {
+            content: content.to_typst(),
+        }
+    }
+}
+
+impl IntoValue for GlobalContext {
+    fn into_value(self) -> Value {
+        let mut d = Dict::new();
+        d.insert("content".into(), self.content.into_value());
+        d.into_value()
+    }
+}
+
+pub struct PageContext<'a> {
     section_path: &'a [Slug],
     page: Option<&'a Slug>,
 }
 
-impl<'a> Context<'a> {
-    pub fn new(tree: Dict, section_path: &'a [Slug], page: Option<&'a Slug>) -> Self {
+impl<'a> PageContext<'a> {
+    pub fn new(path: &'a [Slug], page: Option<&'a Slug>) -> Self {
         Self {
-            tree,
-            section_path,
+            section_path: path,
             page,
         }
     }
 }
 
-impl<'a, 'b> IntoValue for Context<'a> {
+impl<'a> IntoValue for PageContext<'a> {
     fn into_value(self) -> Value {
         let mut d = Dict::new();
-        d.insert("content".into(), Value::Dict(self.tree));
         let path: Vec<_> = self
             .section_path
             .iter()
@@ -37,7 +61,6 @@ impl<'a, 'b> IntoValue for Context<'a> {
         if let Some(page) = self.page {
             d.insert("page".into(), Value::Str(page.as_str().into()));
         }
-
-        return Value::Dict(d);
+        d.into_value()
     }
 }

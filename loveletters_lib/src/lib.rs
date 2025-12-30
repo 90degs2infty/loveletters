@@ -14,8 +14,12 @@ mod slug;
 mod utils;
 
 use crate::{
-    bundleing::Bundler, discovery::Discoverer, error::Result, frontmatter_parsing::Parser,
-    rendering::Renderer, utils::ensure_exists,
+    bundleing::Bundler,
+    discovery::Discoverer,
+    error::Result,
+    frontmatter_parsing::Parser,
+    rendering::{Renderer, context::GlobalContext},
+    utils::ensure_exists,
 };
 use std::path::PathBuf;
 
@@ -32,11 +36,12 @@ pub fn render_dir(input_dir: PathBuf, output_dir: PathBuf) -> Result<()> {
     let content_dir = input_dir.join("content");
 
     let parser = Parser::new();
-    let renderer = Renderer::new();
     let bundler = Bundler::new(input_dir.clone(), output_dir);
 
     let discovered_content = Discoverer::try_traverse(content_dir)?;
     let frontmatter = parser.try_parse(discovered_content)?;
+    let global_ctx = GlobalContext::new(&frontmatter);
+    let renderer = Renderer::new(global_ctx);
     let rendering = renderer.try_render(frontmatter)?;
     bundler.try_bundle(rendering)
 }

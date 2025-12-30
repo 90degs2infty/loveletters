@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use typst::diag::{FileError, FileResult, PackageError, PackageResult, eco_format};
-use typst::foundations::{Bytes, Datetime, IntoValue};
+use typst::foundations::{Bytes, Datetime, Dict, IntoValue};
 use typst::syntax::package::PackageSpec;
 use typst::syntax::{FileId, Source};
 use typst::text::{Font, FontBook};
@@ -13,7 +13,7 @@ use typst::{Feature, Library, LibraryExt};
 use typst_kit::fonts::{FontSearcher, FontSlot};
 use ureq::agent;
 
-use crate::rendering::context::Context;
+use crate::rendering::context::{GlobalContext, PageContext};
 
 // TODO: check that pathbuf actually is relative!
 type RelativePath = PathBuf;
@@ -53,7 +53,12 @@ pub struct TypstEngine {
 }
 
 impl TypstEngine {
-    pub fn new(root_dir: PathBuf, root_file: RelativePath, ctx: Context) -> Self {
+    pub fn new(
+        root_dir: PathBuf,
+        root_file: RelativePath,
+        gctx: GlobalContext,
+        pctx: PageContext,
+    ) -> Self {
         let root_file = root_dir.join(root_file);
         // Top-level content and directory
         println!("Working on {}", root_file.display());
@@ -72,6 +77,10 @@ impl TypstEngine {
 
         // Inject loveletters' default top-level bindings
         // TODO place them under system input?
+        let mut ctx = Dict::new();
+        ctx.insert("global".into(), gctx.into_value());
+        ctx.insert("page".into(), pctx.into_value());
+
         lib.global
             .scope_mut()
             .define("loveletters", ctx.into_value());
