@@ -1,6 +1,7 @@
 //! loveletters' heavy lifting.
 
 mod bundleing;
+mod config;
 mod content;
 mod discovery;
 pub mod error;
@@ -14,6 +15,7 @@ mod utils;
 
 use crate::{
     bundleing::Bundler,
+    config::Config,
     discovery::Discoverer,
     error::Result,
     frontmatter_parsing::Parser,
@@ -34,12 +36,14 @@ pub fn render_dir(input_dir: PathBuf, output_dir: PathBuf) -> Result<()> {
 
     let content_dir = input_dir.join("content");
 
+    let config = Config::try_read_from_disk(&input_dir.join("loveletters.toml"))?;
+
     let parser = Parser::new();
     let bundler = Bundler::new(input_dir.clone(), output_dir);
 
     let discovered_content = Discoverer::try_traverse(content_dir)?;
     let frontmatter = parser.try_parse(discovered_content)?;
-    let global_ctx = GlobalContext::new(&frontmatter);
+    let global_ctx = GlobalContext::new(&frontmatter, config);
     let renderer = Renderer::new(global_ctx);
     let rendering = renderer.try_render(frontmatter)?;
     bundler.try_bundle(rendering)

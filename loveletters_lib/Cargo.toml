@@ -25,6 +25,7 @@ typst.workspace = true
 typst-html.workspace = true
 typst-kit.workspace = true
 ureq.workspace = true
+url = { workspace = true, features = ["serde"] }
 walkdir.workspace = true
 zune-inflate.workspace = true
 

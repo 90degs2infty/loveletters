@@ -1,6 +1,7 @@
 use typst::foundations::{Dict, IntoValue, Str, Value};
 
 use crate::{
+    config::Config,
     content::{IndexFrontmatter, LeafFrontmatter},
     frontmatter_parsing::PageWithFrontmatter,
     page::{Index, Leaf},
@@ -11,6 +12,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct GlobalContext {
     content: Dict,
+    config: Config,
 }
 
 impl GlobalContext {
@@ -19,17 +21,21 @@ impl GlobalContext {
             PageWithFrontmatter<Index, IndexFrontmatter>,
             PageWithFrontmatter<Leaf, LeafFrontmatter>,
         >,
+        config: Config,
     ) -> Self {
         Self {
             content: content.to_typst(),
+            config,
         }
     }
 }
 
 impl IntoValue for GlobalContext {
     fn into_value(self) -> Value {
+        let Self { content, config } = self;
         let mut d = Dict::new();
-        d.insert("content".into(), self.content.into_value());
+        d.insert("content".into(), content.into_value());
+        d.insert("config".into(), config.to_typst().into_value());
         d.into_value()
     }
 }

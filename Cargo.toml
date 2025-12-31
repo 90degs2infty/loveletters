@@ -32,6 +32,7 @@ typst = "0.14.0"
 typst-html = "0.14.0"
 typst-kit = "0.14.0"
 ureq = "3.1.4"
+url = "2.5.7"
 walkdir = "2.5.0"
 zune-inflate = "0.2.54"
 
