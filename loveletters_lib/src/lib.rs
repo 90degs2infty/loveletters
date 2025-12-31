@@ -3,7 +3,6 @@
 mod bundleing;
 mod content;
 mod discovery;
-mod driver_typst;
 pub mod error;
 mod frontmatter_parsing;
 mod page;

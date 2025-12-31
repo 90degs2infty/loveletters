@@ -1,17 +1,18 @@
 pub mod context;
+mod driver_typst;
 
 use std::{marker::PhantomData, path::PathBuf};
 
 use crate::{
     bundleing::{InMemFile, PageBundle},
     content::{IndexFrontmatter, LeafFrontmatter},
-    driver_typst::TypstEngine,
     error::Result,
     frontmatter_parsing::PageWithFrontmatter,
     page::{Index, Leaf, Mode},
     rendering::context::{GlobalContext, PageContext},
     section::Section,
 };
+use driver_typst::TypstEngine;
 use typst_html::HtmlDocument;
 
 pub struct RenderedPage<M> {
