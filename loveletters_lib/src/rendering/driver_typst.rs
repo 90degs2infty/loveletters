@@ -1,3 +1,11 @@
+// This module has been adapted from https://github.com/tfachmann/typst-as-library/blob/7710cc196465d99e8bbeff54f8dee229ff612cb0/src/lib.rs,
+// released under Apache License, Version 2.0, (license available at https://github.com/tfachmann/typst-as-library/blob/7710cc196465d99e8bbeff54f8dee229ff612cb0/LICENSE).
+//
+// Changes include:
+// - annotations of future todos
+// - adaptions in the way `TypstEngine` (formerly known as `TypstWrapperWorld`) is instantiated
+// - lookup procedure for packages from the `loveletters` namespace
+
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::PathBuf;
@@ -15,7 +23,7 @@ use ureq::agent;
 
 use crate::rendering::context::{GlobalContext, PageContext};
 
-// TODO: check that pathbuf actually is relative!
+// TODO: check that pathbuf actually is relative (maybe use VirtualPath instead?)!
 type RelativePath = PathBuf;
 
 // TODO there is probably quite a lot you can reuse across invocations of typst for different
@@ -43,6 +51,11 @@ pub struct TypstEngine {
     /// Cache directory (e.g. where packages are downloaded to).
     cache_directory: PathBuf,
 
+    /// Project package directory.
+    ///
+    /// Packages from the `loveletters` namespace are loaded from this directory.
+    project_packages_directory: PathBuf,
+
     // TODO maybe use `download` from `typst_kit` or `reqwest` instead?
     /// http agent to download packages.
     http: ureq::Agent,
@@ -56,6 +69,7 @@ impl TypstEngine {
     pub fn new(
         root_dir: PathBuf,
         root_file: RelativePath,
+        project_packages_directory: PathBuf,
         gctx: GlobalContext,
         pctx: PageContext,
     ) -> Self {
@@ -93,9 +107,11 @@ impl TypstEngine {
             source: Source::detached(root_src),
             time: time::OffsetDateTime::now_utc(),
             // TODO set env-dir using proper config handling (e.g. `config` crate)
+            // TODO reuse across instantiations of `TypstEngine` to reduce the number of package downloads
             cache_directory: std::env::var_os("CACHE_DIRECTORY")
                 .map(|os_path| os_path.into())
                 .unwrap_or(std::env::temp_dir()),
+            project_packages_directory,
             http: agent(),
             files: Arc::new(Mutex::new(HashMap::new())),
         }
@@ -141,7 +157,7 @@ impl TypstEngine {
         }
         let path = if let Some(package) = id.package() {
             // Fetching file from package
-            let package_dir = self.download_package(package)?;
+            let package_dir = self.lookup_or_download_package(package)?;
             id.vpath().resolve(&package_dir)
         } else {
             // Fetching file from disk
@@ -156,9 +172,38 @@ impl TypstEngine {
             .clone())
     }
 
+    /// Lookup packages from the `loveletters` namespace
+    fn lookup_project_package(&self, package: &PackageSpec) -> PackageResult<PathBuf> {
+        if package.name == "loveletters" {
+            // TODO
+            // Currently, we expect the user to copy/link the loveletters package. At a later
+            // point, we will want to provide it ourselves.
+        }
+
+        let package_dir = self.project_packages_directory.join(package.name.as_str());
+        if !package_dir.exists() {
+            return Err(PackageError::NotFound(package.clone()));
+        }
+
+        let version_dir = package_dir.join(format!("{}", package.version));
+        if !version_dir.exists() {
+            return Err(PackageError::VersionNotFound(
+                package.clone(),
+                package.version,
+            ));
+        }
+
+        Ok(version_dir)
+    }
+
     /// Downloads the package and returns the system path of the unpacked package.
-    fn download_package(&self, package: &PackageSpec) -> PackageResult<PathBuf> {
+    fn lookup_or_download_package(&self, package: &PackageSpec) -> PackageResult<PathBuf> {
+        if package.namespace == "loveletters" {
+            return self.lookup_project_package(package);
+        }
+
         let package_subdir = format!("{}/{}/{}", package.namespace, package.name, package.version);
+
         let path = self.cache_directory.join(package_subdir);
 
         if path.exists() {

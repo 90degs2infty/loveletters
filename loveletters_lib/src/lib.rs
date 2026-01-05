@@ -44,7 +44,7 @@ pub fn render_dir(input_dir: PathBuf, output_dir: PathBuf) -> Result<()> {
     let discovered_content = Discoverer::try_traverse(content_dir)?;
     let frontmatter = parser.try_parse(discovered_content)?;
     let global_ctx = GlobalContext::new(&frontmatter, config);
-    let renderer = Renderer::new(global_ctx);
+    let renderer = Renderer::new(global_ctx, input_dir.join("packages"));
     let rendering = renderer.try_render(frontmatter)?;
     bundler.try_bundle(rendering)
 }

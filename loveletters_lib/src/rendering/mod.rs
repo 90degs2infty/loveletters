@@ -38,11 +38,15 @@ impl<M> RenderedPage<M> {
 
 pub struct Renderer {
     ctx: GlobalContext,
+    project_packages: PathBuf,
 }
 
 impl Renderer {
-    pub fn new(ctx: GlobalContext) -> Self {
-        Self { ctx }
+    pub fn new(ctx: GlobalContext, project_packages_dir: PathBuf) -> Self {
+        Self {
+            ctx,
+            project_packages: project_packages_dir,
+        }
     }
 
     pub fn try_render(
@@ -77,8 +81,13 @@ impl Renderer {
         // let entrypoint = engine.wrap(&self);
         // or similar...
         let root_file = M::typst_filename().into();
-        let entrypoint =
-            TypstEngine::new(content_dir.clone(), root_file, self.ctx.clone(), page_ctx);
+        let entrypoint = TypstEngine::new(
+            content_dir.clone(),
+            root_file,
+            self.project_packages.clone(),
+            self.ctx.clone(),
+            page_ctx,
+        );
         let typst_document = typst::compile(&entrypoint)
             .output
             .expect("Failed to compile post using typst");
