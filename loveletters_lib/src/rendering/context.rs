@@ -10,12 +10,12 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct GlobalContext {
+pub struct ProjectContext {
     content: Dict,
     config: Config,
 }
 
-impl GlobalContext {
+impl ProjectContext {
     pub fn new(
         content: &Section<
             PageWithFrontmatter<Index, IndexFrontmatter>,
@@ -30,7 +30,7 @@ impl GlobalContext {
     }
 }
 
-impl IntoValue for GlobalContext {
+impl IntoValue for ProjectContext {
     fn into_value(self) -> Value {
         let Self { content, config } = self;
         let mut d = Dict::new();

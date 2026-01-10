@@ -21,7 +21,7 @@ use typst::{Feature, Library, LibraryExt};
 use typst_kit::fonts::{FontSearcher, FontSlot};
 use ureq::agent;
 
-use crate::rendering::context::{GlobalContext, PageContext};
+use crate::rendering::context::{PageContext, ProjectContext};
 
 // TODO: check that pathbuf actually is relative (maybe use VirtualPath instead?)!
 type RelativePath = PathBuf;
@@ -70,7 +70,7 @@ impl TypstEngine {
         root_dir: PathBuf,
         root_file: RelativePath,
         project_packages_directory: PathBuf,
-        gctx: GlobalContext,
+        gctx: ProjectContext,
         pctx: PageContext,
     ) -> Self {
         let root_file = root_dir.join(root_file);
@@ -90,9 +90,8 @@ impl TypstEngine {
         let fonts = FontSearcher::new().include_system_fonts(true).search();
 
         // Inject loveletters' default top-level bindings
-        // TODO place them under system input?
         let mut ctx = Dict::new();
-        ctx.insert("global".into(), gctx.into_value());
+        ctx.insert("project".into(), gctx.into_value());
         ctx.insert("page".into(), pctx.into_value());
 
         lib.global

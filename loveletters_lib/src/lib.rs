@@ -19,7 +19,7 @@ use crate::{
     discovery::Discoverer,
     error::Result,
     frontmatter_parsing::Parser,
-    rendering::{Renderer, context::GlobalContext},
+    rendering::{Renderer, context::ProjectContext},
     utils::ensure_exists,
 };
 use std::path::PathBuf;
@@ -43,7 +43,7 @@ pub fn render_dir(input_dir: PathBuf, output_dir: PathBuf) -> Result<()> {
 
     let discovered_content = Discoverer::try_traverse(content_dir)?;
     let frontmatter = parser.try_parse(discovered_content)?;
-    let global_ctx = GlobalContext::new(&frontmatter, config);
+    let global_ctx = ProjectContext::new(&frontmatter, config);
     let renderer = Renderer::new(global_ctx, input_dir.join("packages"));
     let rendering = renderer.try_render(frontmatter)?;
     bundler.try_bundle(rendering)

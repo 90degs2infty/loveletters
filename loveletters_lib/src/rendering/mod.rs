@@ -9,7 +9,7 @@ use crate::{
     error::Result,
     frontmatter_parsing::PageWithFrontmatter,
     page::{Index, Leaf, Mode},
-    rendering::context::{GlobalContext, PageContext},
+    rendering::context::{ProjectContext, PageContext},
     section::Section,
 };
 use driver_typst::TypstEngine;
@@ -37,12 +37,12 @@ impl<M> RenderedPage<M> {
 }
 
 pub struct Renderer {
-    ctx: GlobalContext,
+    ctx: ProjectContext,
     project_packages: PathBuf,
 }
 
 impl Renderer {
-    pub fn new(ctx: GlobalContext, project_packages_dir: PathBuf) -> Self {
+    pub fn new(ctx: ProjectContext, project_packages_dir: PathBuf) -> Self {
         Self {
             ctx,
             project_packages: project_packages_dir,
