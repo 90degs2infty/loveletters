@@ -8,6 +8,8 @@ use crate::error::Result;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
+    title: String,
+    author: String,
     root: Url,
 }
 
@@ -25,7 +27,11 @@ impl Config {
     }
 
     pub fn to_typst(&self) -> Dict {
-        let Self { root } = self;
+        let Self {
+            title,
+            author,
+            root,
+        } = self;
 
         let mut root_dict = Dict::new();
 
@@ -36,6 +42,8 @@ impl Config {
 
         let mut d = Dict::new();
         d.insert("root".into(), root_dict.into_value());
+        d.insert("author".into(), author.as_str().into_value());
+        d.insert("title".into(), title.as_str().into_value());
 
         d
     }
