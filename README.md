@@ -52,7 +52,7 @@ To do so, simply copy the content of this repository's subfolder `loveletters_ut
 You can then import said package using
 
 ```typ
-#import "@loveletters/template:0.1.0": toplevel_template
+#import "@loveletters/loveletters:0.1.0": *
 ```
 
 from within your `typst` content.
