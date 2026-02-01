@@ -70,7 +70,7 @@ pub enum Error {
         path: PathBuf,
     },
     /// Arbitrary file IO error
-    // TODO: is there a way to avoid the allocation when building this error message?
+    // ISSUE(7): is there a way to avoid the allocation when building this error message?
     #[error("failed to perform file IO{desc}", desc = build_desc_fileio(&path))]
     FileIO {
         /// The path associated with the underlying error
