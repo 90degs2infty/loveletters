@@ -1,6 +1,12 @@
 //! Error handling
 
-use std::{fmt::Debug, io::Error as IoError, path::PathBuf};
+use std::{
+    error,
+    fmt::{self, Debug},
+    io::Error as IoError,
+    path::{Path, PathBuf},
+    result,
+};
 use thiserror::Error;
 
 /// Entities within a `loveletters` project
@@ -20,7 +26,7 @@ pub enum EntityKind {
 }
 
 impl EntityKind {
-    fn describe(&self) -> &'static str {
+    fn describe(self) -> &'static str {
         match self {
             EntityKind::InputDirectory => "input directory",
             EntityKind::OutputDirectory => "output directory",
@@ -31,21 +37,18 @@ impl EntityKind {
     }
 }
 
-fn build_desc_fileio(path: &Option<PathBuf>) -> String {
+fn build_desc_fileio(path: Option<&Path>) -> String {
     match path {
-        None => "".to_string(),
+        None => String::new(),
         Some(path) => format!(" for path '{}'", path.display()),
     }
 }
 
-fn fmt_source_chain(
-    e: &impl std::error::Error,
-    f: &mut std::fmt::Formatter<'_>,
-) -> std::fmt::Result {
-    writeln!(f, "{}\n", e)?;
+fn fmt_source_chain(e: &impl error::Error, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    writeln!(f, "{e}\n")?;
     let mut current = e.source();
     while let Some(cause) = current {
-        writeln!(f, "Caused by:\n\t{:?}", cause)?;
+        writeln!(f, "Caused by:\n\t{cause:?}")?;
         current = cause.source();
     }
     Ok(())
@@ -71,7 +74,7 @@ pub enum Error {
     },
     /// Arbitrary file IO error
     // ISSUE(7): is there a way to avoid the allocation when building this error message?
-    #[error("failed to perform file IO{desc}", desc = build_desc_fileio(&path))]
+    #[error("failed to perform file IO{desc}", desc = build_desc_fileio(path.as_deref()))]
     FileIO {
         /// The path associated with the underlying error
         path: Option<PathBuf>,
@@ -114,11 +117,11 @@ pub enum Error {
     },
 }
 
-impl std::fmt::Debug for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt_source_chain(&self, f)
     }
 }
 
 /// Default return type for fallible operations
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = result::Result<T, Error>;
