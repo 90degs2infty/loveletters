@@ -1,8 +1,7 @@
 //! loveletters commandline interface.
 
-use anyhow::Result;
 use clap::Parser;
-use loveletters_lib::render_dir;
+use loveletters_lib::{error::Result, render_dir};
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -24,7 +23,5 @@ struct Args {
 async fn main() -> Result<()> {
     let args = Args::parse();
 
-    render_dir(args.input_dir, args.output_dir)?;
-
-    Ok(())
+    render_dir(args.input_dir, args.output_dir)
 }

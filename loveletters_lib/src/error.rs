@@ -45,7 +45,7 @@ fn fmt_source_chain(
     writeln!(f, "{}\n", e)?;
     let mut current = e.source();
     while let Some(cause) = current {
-        writeln!(f, "caused by:\n\t{:?}", cause)?;
+        writeln!(f, "Caused by:\n\t{:?}", cause)?;
         current = cause.source();
     }
     Ok(())
