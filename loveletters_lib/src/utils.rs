@@ -1,4 +1,4 @@
-use crate::error::Result;
+use crate::error::{Error, Result};
 use std::{fs, io::ErrorKind, path::Path};
 
 pub fn ensure_exists(path: &Path) -> Result<()> {
@@ -6,9 +6,9 @@ pub fn ensure_exists(path: &Path) -> Result<()> {
         Err(e) if e.kind() == ErrorKind::AlreadyExists => Ok(()),
         r => r,
     }
-    .expect(&format!(
-        "Failed to ensure existence at at '{}'",
-        path.display()
-    ));
+    .map_err(|e| Error::FileIO {
+        path: Some(path.to_path_buf()),
+        raw: e,
+    })?;
     Ok(())
 }

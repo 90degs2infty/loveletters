@@ -10,10 +10,9 @@ impl Slug {
             .as_ref()
             .file_name()
             .and_then(OsStr::to_str)
-            .expect(&format!(
-                "Failed to determine page slug for directory {}",
-                path.as_ref().display()
-            ))
+            .ok_or_else(|| Error::InvalidSlug {
+                path: path.as_ref().to_path_buf(),
+            })?
             .to_owned();
         Ok(Self(slug))
     }
