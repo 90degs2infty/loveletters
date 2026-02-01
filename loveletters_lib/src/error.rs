@@ -2,7 +2,7 @@
 
 use std::{
     error,
-    fmt::{self, Debug},
+    fmt::{self, Debug, Display},
     io::Error as IoError,
     path::{Path, PathBuf},
     result,
@@ -25,14 +25,14 @@ pub enum EntityKind {
     Other,
 }
 
-impl EntityKind {
-    fn describe(self) -> &'static str {
+impl Display for EntityKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            EntityKind::InputDirectory => "input directory",
-            EntityKind::OutputDirectory => "output directory",
-            EntityKind::ProjectConfig => "project configuration file",
-            EntityKind::TypstRoot => "typst root file",
-            EntityKind::Other => "file or directory",
+            EntityKind::InputDirectory => write!(f, "input directory"),
+            EntityKind::OutputDirectory => write!(f, "output directory"),
+            EntityKind::ProjectConfig => write!(f, "project configuration file"),
+            EntityKind::TypstRoot => write!(f, "typst root file"),
+            EntityKind::Other => write!(f, "file or directory"),
         }
     }
 }
@@ -59,7 +59,7 @@ fn fmt_source_chain(e: &impl error::Error, f: &mut fmt::Formatter<'_>) -> fmt::R
 #[non_exhaustive]
 pub enum Error {
     /// File or directory not found
-    #[error("failed to find {entity} at '{path}'", entity = missing.describe())]
+    #[error("failed to find {missing} at '{path}'")]
     NotFound {
         /// The entity that is missing
         missing: EntityKind,
