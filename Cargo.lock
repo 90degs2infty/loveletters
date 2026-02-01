@@ -1348,6 +1348,7 @@ dependencies = [
 name = "loveletters_lib"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bytes",
  "const_format",
  "serde",

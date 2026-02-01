@@ -7,7 +7,7 @@
 // - lookup procedure for packages from the `loveletters` namespace
 
 use std::collections::HashMap;
-use std::io::Read;
+use std::io::{ErrorKind, Read};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
@@ -21,7 +21,10 @@ use typst::{Feature, Library, LibraryExt};
 use typst_kit::fonts::{FontSearcher, FontSlot};
 use ureq::agent;
 
-use crate::rendering::context::{PageContext, ProjectContext};
+use crate::{
+    error::{EntityKind, Error, Result as CrateResult},
+    rendering::context::{PageContext, ProjectContext},
+};
 
 // TODO: check that pathbuf actually is relative (maybe use VirtualPath instead?)!
 type RelativePath = PathBuf;
@@ -72,15 +75,21 @@ impl TypstEngine {
         project_packages_directory: PathBuf,
         gctx: ProjectContext,
         pctx: PageContext,
-    ) -> Self {
+    ) -> CrateResult<Self> {
         let root_file = root_dir.join(root_file);
         // Top-level content and directory
         println!("Working on {}", root_file.display());
 
-        let root_src = std::fs::read_to_string(&root_file).expect(&format!(
-            "Failed to read typst source from {}. Are you sure the file exists?",
-            &root_file.display()
-        ));
+        let root_src = std::fs::read_to_string(&root_file).map_err(|e| match e.kind() {
+            ErrorKind::NotFound => Error::NotFound {
+                missing: EntityKind::TypstRoot,
+                path: root_file,
+            },
+            _ => Error::FileIO {
+                path: Some(root_file),
+                raw: e,
+            },
+        })?;
 
         // Library
         let mut lib = Library::builder()
@@ -98,7 +107,7 @@ impl TypstEngine {
             .scope_mut()
             .define("loveletters", ctx.into_value());
 
-        Self {
+        Ok(Self {
             library: LazyHash::new(lib),
             book: LazyHash::new(fonts.book),
             root: root_dir,
@@ -113,7 +122,7 @@ impl TypstEngine {
             project_packages_directory,
             http: agent(),
             files: Arc::new(Mutex::new(HashMap::new())),
-        }
+        })
     }
 }
 

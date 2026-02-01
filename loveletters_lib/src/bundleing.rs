@@ -6,7 +6,7 @@ use std::{
 use bytes::Bytes;
 
 use crate::{
-    error::Result,
+    error::{Error, Result},
     page::{Index, Leaf},
     rendering::RenderedPage,
     section::Section,
@@ -23,10 +23,10 @@ impl InMemFile {
     }
 
     pub fn write_to(self, out_file: &Path) -> Result<()> {
-        Ok(fs::write(out_file, self.content).expect(&format!(
-            "Failed to write content of in-memory file to '{}'",
-            out_file.display(),
-        )))
+        fs::write(out_file, self.content).map_err(|e| Error::FileIO {
+            path: Some(out_file.to_path_buf()),
+            raw: e,
+        })
     }
 }
 

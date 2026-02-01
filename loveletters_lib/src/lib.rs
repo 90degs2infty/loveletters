@@ -17,7 +17,7 @@ use crate::{
     bundleing::Bundler,
     config::Config,
     discovery::Discoverer,
-    error::Result,
+    error::{EntityKind, Error, Result},
     frontmatter_parsing::Parser,
     rendering::{Renderer, context::ProjectContext},
     utils::ensure_exists,
@@ -25,21 +25,35 @@ use crate::{
 use std::path::PathBuf;
 
 pub fn render_dir(input_dir: PathBuf, output_dir: PathBuf) -> Result<()> {
-    let input_dir = input_dir
-        .canonicalize()
-        .expect("Could not resolve specified input directory");
+    let input_dir = &input_dir.canonicalize().map_err(|e| match e.kind() {
+        std::io::ErrorKind::NotFound => Error::NotFound {
+            missing: EntityKind::InputDirectory,
+            path: input_dir,
+        },
+        _ => Error::FileIO {
+            path: Some(input_dir),
+            raw: e,
+        },
+    })?;
 
+    let output_dir = &output_dir.canonicalize().map_err(|e| match e.kind() {
+        std::io::ErrorKind::NotFound => Error::NotFound {
+            missing: EntityKind::OutputDirectory,
+            path: output_dir,
+        },
+        _ => Error::FileIO {
+            path: Some(output_dir),
+            raw: e,
+        },
+    })?;
     ensure_exists(&output_dir)?;
-    let output_dir = output_dir
-        .canonicalize()
-        .expect("Could not resolve specified output directory");
 
     let content_dir = input_dir.join("content");
 
     let config = Config::try_read_from_disk(&input_dir.join("loveletters.toml"))?;
 
     let parser = Parser::new();
-    let bundler = Bundler::new(input_dir.clone(), output_dir);
+    let bundler = Bundler::new(input_dir.clone(), output_dir.clone());
 
     let discovered_content = Discoverer::try_traverse(content_dir)?;
     let frontmatter = parser.try_parse(discovered_content)?;

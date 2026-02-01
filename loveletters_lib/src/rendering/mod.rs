@@ -2,18 +2,80 @@ pub mod context;
 mod driver_typst;
 
 use std::{marker::PhantomData, path::PathBuf};
+use typst::{
+    diag::{Severity, SourceDiagnostic},
+    ecow::EcoVec,
+};
 
 use crate::{
     bundleing::{InMemFile, PageBundle},
     content::{IndexFrontmatter, LeafFrontmatter},
-    error::Result,
+    error::{Error, Result},
     frontmatter_parsing::PageWithFrontmatter,
     page::{Index, Leaf, Mode},
-    rendering::context::{ProjectContext, PageContext},
+    rendering::context::{PageContext, ProjectContext},
     section::Section,
 };
 use driver_typst::TypstEngine;
 use typst_html::HtmlDocument;
+
+struct TypstError {
+    diagnostics: EcoVec<SourceDiagnostic>,
+}
+
+impl TypstError {
+    fn from_diagnostics(diagnostics: EcoVec<SourceDiagnostic>) -> Self {
+        Self { diagnostics }
+    }
+}
+
+impl From<EcoVec<SourceDiagnostic>> for TypstError {
+    fn from(value: EcoVec<SourceDiagnostic>) -> Self {
+        Self::from_diagnostics(value)
+    }
+}
+
+// Here is how typst prints out messages internally (for a HintedStrResult -> HintedString):
+// https://github.com/typst/typst/blob/bf946178ec3cb34c06b4666ea237a025b4ca4aa0/crates/typst-cli/src/main.rs#L59-L65
+// https://docs.rs/typst/latest/typst/diag/type.HintedStrResult.html
+
+impl std::fmt::Display for TypstError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "failed to compile document")
+    }
+}
+
+fn describe_severity(severity: Severity) -> &'static str {
+    match severity {
+        Severity::Error => "error",
+        Severity::Warning => "warning",
+    }
+}
+
+impl std::fmt::Debug for TypstError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.diagnostics.len() > 0 {
+            for d in &self.diagnostics {
+                write!(f, "\n    {}: {}", describe_severity(d.severity), d.message)?;
+                for h in &d.hints {
+                    write!(f, "\n        > {}", h)?;
+                }
+            }
+        } else {
+            writeln!(
+                f,
+                "failed to compile document without further diagnostics to show"
+            )?;
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for TypstError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
 
 pub struct RenderedPage<M> {
     content_dir: PathBuf,
@@ -31,7 +93,13 @@ impl<M> RenderedPage<M> {
     }
 
     pub fn try_bundle(self, output_dir: PathBuf) -> Result<PageBundle> {
-        let html = typst_html::html(&self.rendering).expect("Failed to export document to HTML.");
+        let html = typst_html::html(&self.rendering).map_err(|e| {
+            let err: TypstError = e.into();
+            Error::Compilation {
+                page: self.content_dir,
+                raw: err.into(),
+            }
+        })?;
         Ok(PageBundle::new(output_dir, InMemFile::new(html.into())))
     }
 }
@@ -88,9 +156,13 @@ impl Renderer {
             self.ctx.clone(),
             page_ctx,
         );
-        let typst_document = typst::compile(&entrypoint)
-            .output
-            .expect("Failed to compile post using typst");
+        let typst_document = typst::compile(&entrypoint?).output.map_err(|e| {
+            let err: TypstError = e.into();
+            Error::Compilation {
+                page: content_dir.clone(),
+                raw: err.into(),
+            }
+        })?;
         Ok(RenderedPage::new(content_dir, typst_document))
     }
 }

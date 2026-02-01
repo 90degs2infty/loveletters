@@ -1,7 +1,7 @@
 use std::{collections::HashMap, marker::PhantomData, path::PathBuf};
 
 use crate::{
-    error::Result,
+    error::{Error, Result},
     frontmatter_parsing::PageWithFrontmatter,
     page::{Index, Leaf, Mode},
     section::Section,
@@ -67,13 +67,22 @@ impl Discoverer {
                 Discoverer::is_frontmatter::<Leaf>(e) && !Discoverer::is_reserved_dir(e)
             })
             .map(|entry| {
-                let entry = entry.expect(&format!(
-                    "Failed to access entry. Are you sure {} exists?",
-                    dir.display()
-                ));
-
+                let entry = entry.map_err(|e| {
+                    if let Some(p) = e.loop_ancestor() {
+                        Error::MalformedProjectStructure {
+                            path: p.to_path_buf(),
+                        }
+                    } else {
+                        Error::FileIO {
+                            path: e.path().map(|p| p.to_path_buf()),
+                            raw: e.into(),
+                        }
+                    }
+                })?;
+                // We set min_depth to 2 above, so there will always be a parent - if not, this is a logic bug
+                // in our implementation. Hence, we panic instead of returning a `Result`.
                 let parent_dir = entry.path().parent().expect(&format!(
-                    "Failed to determine parent directory for entry at '{}'",
+                    "entry at '{}' should have a filesystem parent as filesystem is traversed with `min_depth` set to 2",
                     entry.path().display()
                 ));
 

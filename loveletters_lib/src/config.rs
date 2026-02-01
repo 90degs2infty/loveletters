@@ -1,10 +1,8 @@
-use std::{fs, path::Path};
-
+use crate::error::{EntityKind, Error, Result};
 use serde::{Deserialize, Serialize};
+use std::{fs, io::ErrorKind, path::Path};
 use typst::foundations::{Dict, IntoValue, Value};
 use url::{Position, Url};
-
-use crate::error::Result;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
@@ -15,14 +13,22 @@ pub struct Config {
 
 impl Config {
     pub fn try_read_from_disk(path: &Path) -> Result<Self> {
-        let config: String = fs::read_to_string(path).expect(&format!(
-            "Failed to open config file at '{}'",
-            path.display()
-        ));
-        let config = toml::from_str(&config).expect(&format!(
-            "Failed to parse config from file at '{}'",
-            path.display()
-        ));
+        let config: String = fs::read_to_string(path).map_err(|e| match e.kind() {
+            ErrorKind::NotFound => Error::NotFound {
+                missing: EntityKind::ProjectConfig,
+                path: path.to_path_buf(),
+            },
+            _ => Error::FileIO {
+                path: Some(path.to_path_buf()),
+                raw: e.into(),
+            },
+        })?;
+        let config = toml::from_str(&config).map_err(|e| Error::MalformedProjectConfig {
+            location: path.to_path_buf(),
+            // No need to attach additional context, as the context is represented by
+            // the containing error
+            raw: e.into(),
+        })?;
         Ok(config)
     }
 
