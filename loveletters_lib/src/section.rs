@@ -64,12 +64,12 @@ impl<I, L> Section<I, L> {
         })
     }
 
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "path is cloned multiple times inside this function so do not pretend we do not need ownership"
+    )]
     fn try_walk_helper<J, M, FIndex, FLeaf>(
         mut self,
-        #[allow(
-            clippy::needless_pass_by_value,
-            reason = "path is cloned multiple times inside this function so do not pretend we do not need ownership"
-        )]
         path: Vec<Slug>,
         f_index: FIndex,
         f_leaf: FLeaf,
