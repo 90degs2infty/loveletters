@@ -22,6 +22,8 @@ bytes = "1.11.0"
 clap = "4.5.51"
 const_format = "0.2.35"
 loveletters_lib = { path = "./loveletters_lib" }
+# TODO dev-dependency!
+proptest = "1.10.0"
 serde = "1.0.228"
 tar = "0.4.44"
 thiserror = "2.0.17"

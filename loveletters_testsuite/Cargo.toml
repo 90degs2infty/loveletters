@@ -14,6 +14,10 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+proptest.workspace = true
+serde = { workspace = true, features = ["derive"] }
+time = { workspace = true, features = ["serde", "parsing"] }
+toml.workspace = true
 
 [lints]
 workspace = true
