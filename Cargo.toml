@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["loveletters_bin", "loveletters_lib"]
+members = ["loveletters_bin", "loveletters_lib", "loveletters_testsuite"]
 
 [workspace.package]
 authors = ["90degs2infty <90degs2infty@posteo.org>"]
