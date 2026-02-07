@@ -1,12 +1,6 @@
 pub mod context;
 mod driver_typst;
 
-use std::{marker::PhantomData, path::PathBuf};
-use typst::{
-    diag::{Severity, SourceDiagnostic},
-    ecow::EcoVec,
-};
-
 use crate::{
     bundleing::{InMemFile, PageBundle},
     content::{IndexFrontmatter, LeafFrontmatter},
@@ -17,6 +11,16 @@ use crate::{
     section::Section,
 };
 use driver_typst::TypstEngine;
+use std::{
+    error,
+    fmt::{self, Debug, Display},
+    marker::PhantomData,
+    path::PathBuf,
+};
+use typst::{
+    diag::{Severity, SourceDiagnostic},
+    ecow::EcoVec,
+};
 use typst_html::HtmlDocument;
 
 struct TypstError {
@@ -35,12 +39,8 @@ impl From<EcoVec<SourceDiagnostic>> for TypstError {
     }
 }
 
-// Here is how typst prints out messages internally (for a HintedStrResult -> HintedString):
-// https://github.com/typst/typst/blob/bf946178ec3cb34c06b4666ea237a025b4ca4aa0/crates/typst-cli/src/main.rs#L59-L65
-// https://docs.rs/typst/latest/typst/diag/type.HintedStrResult.html
-
-impl std::fmt::Display for TypstError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for TypstError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "failed to compile document")
     }
 }
@@ -52,27 +52,31 @@ fn describe_severity(severity: Severity) -> &'static str {
     }
 }
 
-impl std::fmt::Debug for TypstError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.diagnostics.len() > 0 {
-            for d in &self.diagnostics {
-                write!(f, "\n    {}: {}", describe_severity(d.severity), d.message)?;
-                for h in &d.hints {
-                    write!(f, "\n        > {}", h)?;
-                }
-            }
-        } else {
+impl Debug for TypstError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Here is how typst prints out messages internally (for a HintedStrResult -> HintedString):
+        // https://github.com/typst/typst/blob/bf946178ec3cb34c06b4666ea237a025b4ca4aa0/crates/typst-cli/src/main.rs#L59-L65
+        // https://docs.rs/typst/latest/typst/diag/type.HintedStrResult.html
+
+        if self.diagnostics.is_empty() {
             writeln!(
                 f,
                 "failed to compile document without further diagnostics to show"
             )?;
+        } else {
+            for d in &self.diagnostics {
+                write!(f, "\n    {}: {}", describe_severity(d.severity), d.message)?;
+                for h in &d.hints {
+                    write!(f, "\n        > {h}")?;
+                }
+            }
         }
         Ok(())
     }
 }
 
-impl std::error::Error for TypstError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl error::Error for TypstError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         None
     }
 }
@@ -127,11 +131,11 @@ impl Renderer {
         content.try_walk(
             |path, page| {
                 let ctx = PageContext::new(path, None);
-                page.try_render(&self, ctx)
+                page.try_render(self, ctx)
             },
             |path, slug, page| {
                 let ctx = PageContext::new(path, Some(slug));
-                page.try_render(&self, ctx)
+                page.try_render(self, ctx)
             },
         )
     }

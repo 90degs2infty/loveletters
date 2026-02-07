@@ -1,4 +1,8 @@
-use std::{collections::HashMap, marker::PhantomData, path::PathBuf};
+use std::{
+    collections::HashMap,
+    marker::PhantomData,
+    path::{Path, PathBuf},
+};
 
 use crate::{
     error::{Error, Result},
@@ -10,17 +14,17 @@ use crate::{
 use serde::Deserialize;
 use walkdir::{DirEntry, WalkDir};
 
-static RESERVED_DIRS: [&'static str; 4] = ["_index", "posts", "static", "assets"];
+static RESERVED_DIRS: [&str; 4] = ["_index", "posts", "static", "assets"];
 
 pub struct Discoverer {}
 
 impl Discoverer {
     pub fn try_traverse(
-        content_dir: PathBuf,
+        content_dir: &Path,
     ) -> Result<Section<DiscoveredPage<Index>, DiscoveredPage<Leaf>>> {
         // TODO: implement recursively to collect sub-sections of arbitrary depth of arbitrary name
-        let posts = Discoverer::collect_leaf_pages(content_dir.join("posts"))?;
-        let toplevels = Discoverer::collect_leaf_pages(content_dir.clone())?;
+        let posts = Discoverer::collect_leaf_pages(&content_dir.join("posts"))?;
+        let toplevels = Discoverer::collect_leaf_pages(content_dir)?;
 
         let posts = Section::new(
             "posts".to_owned().into(),
@@ -31,8 +35,8 @@ impl Discoverer {
         let mut sub_secs = HashMap::new();
         let _ = sub_secs.insert("posts".to_owned().into(), posts);
         let toplevel_section = Section::new(
-            "".to_owned().into(),
-            DiscoveredPage::index_page(content_dir.clone().join("").join("_index")),
+            String::new().into(),
+            DiscoveredPage::index_page(content_dir.join("_index")),
             toplevels,
             sub_secs,
         );
@@ -46,8 +50,7 @@ impl Discoverer {
             && entry
                 .file_name()
                 .to_str()
-                .map(|name| name == M::frontmatter_filename())
-                .unwrap_or(false)
+                .is_some_and(|name| name == M::frontmatter_filename())
     }
 
     fn is_reserved_dir(entry: &DirEntry) -> bool {
@@ -58,8 +61,8 @@ impl Discoverer {
                 .is_some_and(|p| RESERVED_DIRS.iter().any(|d| p.ends_with(d)))
     }
 
-    fn collect_leaf_pages(dir: PathBuf) -> Result<HashMap<Slug, DiscoveredPage<Leaf>>> {
-        WalkDir::new(&dir)
+    fn collect_leaf_pages(dir: &Path) -> Result<HashMap<Slug, DiscoveredPage<Leaf>>> {
+        WalkDir::new(dir)
             .min_depth(2)
             .max_depth(2)
             .into_iter()
@@ -74,14 +77,14 @@ impl Discoverer {
                         }
                     } else {
                         Error::FileIO {
-                            path: e.path().map(|p| p.to_path_buf()),
+                            path: e.path().map(Path::to_path_buf),
                             raw: e.into(),
                         }
                     }
                 })?;
                 // We set min_depth to 2 above, so there will always be a parent - if not, this is a logic bug
                 // in our implementation. Hence, we panic instead of returning a `Result`.
-                let parent_dir = entry.path().parent().expect(&format!(
+                let parent_dir = entry.path().parent().unwrap_or_else(|| panic!(
                     "entry at '{}' should have a filesystem parent as filesystem is traversed with `min_depth` set to 2",
                     entry.path().display()
                 ));
@@ -90,7 +93,7 @@ impl Discoverer {
                 let slug: Slug = parent_dir.try_into()?;
                 Ok((
                     slug.clone(),
-                    DiscoveredPage::<Leaf>::leaf_page(slug, parent_dir.to_path_buf()),
+                    DiscoveredPage::<Leaf>::leaf_page(parent_dir.to_path_buf()),
                 ))
             })
             .collect::<Result<HashMap<_, _>>>()
@@ -99,8 +102,6 @@ impl Discoverer {
 
 /// Self-contained directory representing a page.
 pub struct DiscoveredPage<M> {
-    // TODO drop
-    slug: Slug,
     content_dir: PathBuf,
     m: PhantomData<M>,
 }
@@ -109,7 +110,6 @@ impl DiscoveredPage<Index> {
     /// Read an index page for the type `K`.
     pub fn index_page(dir: PathBuf) -> DiscoveredPage<Index> {
         DiscoveredPage {
-            slug: Slug::index(),
             content_dir: dir,
             m: PhantomData,
         }
@@ -118,9 +118,8 @@ impl DiscoveredPage<Index> {
 
 impl DiscoveredPage<Leaf> {
     /// Read a leaf page from the specified directory.
-    pub fn leaf_page(slug: Slug, dir: PathBuf) -> Self {
+    pub fn leaf_page(dir: PathBuf) -> Self {
         DiscoveredPage {
-            slug,
             content_dir: dir,
             m: PhantomData,
         }
@@ -132,6 +131,6 @@ impl<M: Mode> DiscoveredPage<M> {
     where
         F: for<'de> Deserialize<'de>,
     {
-        PageWithFrontmatter::try_parse(self.slug, self.content_dir)
+        PageWithFrontmatter::try_parse(self.content_dir)
     }
 }
