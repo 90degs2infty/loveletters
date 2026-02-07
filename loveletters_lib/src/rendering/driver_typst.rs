@@ -6,10 +6,16 @@
 // - adaptions in the way `TypstEngine` (formerly known as `TypstWrapperWorld`) is instantiated
 // - lookup procedure for packages from the `loveletters` namespace
 
-use std::collections::HashMap;
-use std::io::{ErrorKind, Read};
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    env::{temp_dir, var_os},
+    ffi::OsString,
+    fs::{read as read_file, read_to_string, remove_dir_all},
+    io::{ErrorKind, Read},
+    path::PathBuf,
+    str::from_utf8,
+    sync::{Arc, Mutex},
+};
 
 use typst::diag::{FileError, FileResult, PackageError, PackageResult, eco_format};
 use typst::foundations::{Bytes, Datetime, Dict, IntoValue};
@@ -80,7 +86,7 @@ impl TypstEngine {
         // Top-level content and directory
         println!("Working on {}", root_file.display());
 
-        let root_src = std::fs::read_to_string(&root_file).map_err(|e| match e.kind() {
+        let root_src = read_to_string(&root_file).map_err(|e| match e.kind() {
             ErrorKind::NotFound => Error::NotFound {
                 missing: EntityKind::TypstRoot,
                 path: root_file,
@@ -116,9 +122,7 @@ impl TypstEngine {
             time: time::OffsetDateTime::now_utc(),
             // TODO set env-dir using proper config handling (e.g. `config` crate)
             // TODO reuse across instantiations of `TypstEngine` to reduce the number of package downloads
-            cache_directory: std::env::var_os("CACHE_DIRECTORY")
-                .map(|os_path| os_path.into())
-                .unwrap_or(std::env::temp_dir()),
+            cache_directory: var_os("CACHE_DIRECTORY").map_or_else(temp_dir, OsString::into),
             project_packages_directory,
             http: agent(),
             files: Arc::new(Mutex::new(HashMap::new())),
@@ -126,7 +130,7 @@ impl TypstEngine {
     }
 }
 
-/// A File that will be stored in the HashMap.
+/// A File that will be stored in the `HashMap`.
 #[derive(Clone, Debug)]
 struct FileEntry {
     bytes: Bytes,
@@ -145,7 +149,7 @@ impl FileEntry {
         let source = if let Some(source) = &self.source {
             source
         } else {
-            let contents = std::str::from_utf8(&self.bytes).map_err(|_| FileError::InvalidUtf8)?;
+            let contents = from_utf8(&self.bytes).map_err(|_| FileError::InvalidUtf8)?;
             let contents = contents.trim_start_matches('\u{feff}');
             let source = Source::new(id, contents.into());
             self.source.insert(source)
@@ -173,7 +177,7 @@ impl TypstEngine {
         }
         .ok_or(FileError::AccessDenied)?;
 
-        let content = std::fs::read(&path).map_err(|error| FileError::from_io(error, &path))?;
+        let content = read_file(&path).map_err(|error| FileError::from_io(error, &path))?;
         Ok(files
             .entry(id)
             .or_insert(FileEntry::new(content, None))
@@ -254,7 +258,7 @@ impl TypstEngine {
             .map_err(|error| PackageError::MalformedArchive(Some(eco_format!("{error}"))))?;
         let mut archive = tar::Archive::new(raw_archive.as_slice());
         archive.unpack(&path).map_err(|error| {
-            _ = std::fs::remove_dir_all(&path);
+            _ = remove_dir_all(&path);
             PackageError::MalformedArchive(Some(eco_format!("{error}")))
         })?;
 

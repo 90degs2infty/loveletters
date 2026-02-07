@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use time::{OffsetDateTime, PrimitiveDateTime};
-use typst::foundations::{Dict, IntoValue, Value};
+use typst::foundations::{Datetime, Dict, IntoValue, Value};
 
 // TODO: dedicated module?
 // TODO: should (maybe) be empty instead - how to tell serde?
@@ -17,13 +17,10 @@ impl IndexFrontmatter {
         let Self { title, publication } = self;
 
         let mut d = Dict::new();
-        d.insert(
-            "title".into(),
-            typst::foundations::Value::Str(title.as_str().into()),
-        );
+        d.insert("title".into(), Value::Str(title.as_str().into()));
         d.insert(
             "publication".into(),
-            typst::foundations::Value::Datetime(typst::foundations::Datetime::Datetime(
+            Value::Datetime(Datetime::Datetime(
                 // TODO is this the intended way to (serde) deserialize a date and get a datetime from it?
                 PrimitiveDateTime::new(publication.date(), publication.time()),
             )),
@@ -32,7 +29,7 @@ impl IndexFrontmatter {
     }
 }
 
-impl<'a> IntoValue for &'a IndexFrontmatter {
+impl IntoValue for &IndexFrontmatter {
     fn into_value(self) -> Value {
         self.to_typst()
     }
@@ -51,13 +48,10 @@ impl LeafFrontmatter {
         let Self { title, publication } = self;
 
         let mut d = Dict::new();
-        d.insert(
-            "title".into(),
-            typst::foundations::Value::Str(title.as_str().into()),
-        );
+        d.insert("title".into(), Value::Str(title.as_str().into()));
         d.insert(
             "publication".into(),
-            typst::foundations::Value::Datetime(typst::foundations::Datetime::Datetime(
+            Value::Datetime(Datetime::Datetime(
                 // TODO is this the intended way to (serde) deserialize a date and get a datetime from it?
                 PrimitiveDateTime::new(publication.date(), publication.time()),
             )),
@@ -66,7 +60,7 @@ impl LeafFrontmatter {
     }
 }
 
-impl<'a> IntoValue for &'a LeafFrontmatter {
+impl IntoValue for &LeafFrontmatter {
     fn into_value(self) -> Value {
         self.to_typst()
     }

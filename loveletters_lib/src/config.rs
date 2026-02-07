@@ -20,7 +20,7 @@ impl Config {
             },
             _ => Error::FileIO {
                 path: Some(path.to_path_buf()),
-                raw: e.into(),
+                raw: e,
             },
         })?;
         let config = toml::from_str(&config).map_err(|e| Error::MalformedProjectConfig {

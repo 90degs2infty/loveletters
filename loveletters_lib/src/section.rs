@@ -47,14 +47,14 @@ impl<I, L> Section<I, L> {
             .map(|(slug, res)| Ok((slug, res?)))
             .collect::<Result<HashMap<_, _>>>()?;
 
-        let new_subsecs = if !self.sub_sections.is_empty() {
+        let new_subsecs = if self.sub_sections.is_empty() {
+            HashMap::new()
+        } else {
             self.sub_sections
                 .drain()
                 .map(|(slug, sec)| (slug, sec.try_map(f_index.clone(), f_leaf.clone())))
                 .map(|(slug, res)| Ok((slug, res?)))
                 .collect::<Result<HashMap<_, _>>>()?
-        } else {
-            HashMap::new()
         };
         Ok(Section {
             slug: self.slug,
@@ -64,6 +64,10 @@ impl<I, L> Section<I, L> {
         })
     }
 
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "path is cloned multiple times inside this function so do not pretend we do not need ownership"
+    )]
     fn try_walk_helper<J, M, FIndex, FLeaf>(
         mut self,
         path: Vec<Slug>,
@@ -74,18 +78,20 @@ impl<I, L> Section<I, L> {
         FIndex: Fn(&[Slug], I) -> Result<J> + Clone, // Clone to prevent recursive type
         FLeaf: Fn(&[Slug], &Slug, L) -> Result<M> + Clone,
     {
-        let new_index = f_index(path.as_slice(), self.index)?;
+        let new_index = f_index(&path, self.index)?;
 
         let new_leafs = self
             .pages
             .drain()
             .map(|(slug, page)| {
-                let new_leaf = f_leaf(path.as_slice(), &slug, page);
+                let new_leaf = f_leaf(&path, &slug, page);
                 Ok((slug, new_leaf?))
             })
             .collect::<Result<HashMap<_, _>>>()?;
 
-        let new_subsecs = if !self.sub_sections.is_empty() {
+        let new_subsecs = if self.sub_sections.is_empty() {
+            HashMap::new()
+        } else {
             self.sub_sections
                 .drain()
                 .map(|(slug, sec)| {
@@ -98,8 +104,6 @@ impl<I, L> Section<I, L> {
                     ))
                 })
                 .collect::<Result<HashMap<_, _>>>()?
-        } else {
-            HashMap::new()
         };
         Ok(Section {
             slug: self.slug,
@@ -146,14 +150,14 @@ where
         } = self;
 
         let mut pages_typst = Dict::new();
-        pages.iter().for_each(|(slug, page)| {
+        for (slug, page) in pages {
             pages_typst.insert(slug.as_str().into(), page.into_value());
-        });
+        }
 
         let mut sub_sections_typst = Dict::new();
-        sub_sections.iter().for_each(|(slug, sec)| {
+        for (slug, sec) in sub_sections {
             sub_sections_typst.insert(slug.as_str().into(), Value::Dict(sec.to_typst()));
-        });
+        }
 
         let mut d = Dict::new();
         d.insert("index".into(), index.into_value());
@@ -163,12 +167,12 @@ where
     }
 }
 
-impl<'s, I, L> IntoValue for &'s Section<I, L>
+impl<I, L> IntoValue for &'_ Section<I, L>
 where
     for<'a> &'a I: IntoValue,
     for<'b> &'b L: IntoValue,
 {
-    fn into_value(self) -> typst::foundations::Value {
-        typst::foundations::Value::Dict(self.to_typst())
+    fn into_value(self) -> Value {
+        Value::Dict(self.to_typst())
     }
 }

@@ -50,16 +50,12 @@ impl PageBundle {
 }
 
 pub struct Bundler {
-    root_dir: PathBuf,
     output_dir: PathBuf,
 }
 
 impl Bundler {
-    pub fn new(root_dir: PathBuf, output_dir: PathBuf) -> Self {
-        Self {
-            root_dir,
-            output_dir,
-        }
+    pub fn new(output_dir: PathBuf) -> Self {
+        Self { output_dir }
     }
 
     pub fn try_bundle(

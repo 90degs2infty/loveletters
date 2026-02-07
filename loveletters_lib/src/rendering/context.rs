@@ -54,7 +54,7 @@ impl<'a> PageContext<'a> {
     }
 }
 
-impl<'a> IntoValue for PageContext<'a> {
+impl IntoValue for PageContext<'_> {
     fn into_value(self) -> Value {
         let mut d = Dict::new();
         let path: Vec<_> = self

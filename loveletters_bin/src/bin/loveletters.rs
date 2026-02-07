@@ -6,7 +6,6 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(version, about)]
-
 struct Args {
     /// Make `loveletters` increasingly chatty.
     #[arg(short, long, action = clap::ArgAction::Count)]
