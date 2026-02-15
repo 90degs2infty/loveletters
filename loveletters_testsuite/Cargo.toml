@@ -16,8 +16,10 @@ version.workspace = true
 [dependencies]
 proptest.workspace = true
 serde = { workspace = true, features = ["derive"] }
+tempfile.workspace = true
 time = { workspace = true, features = ["serde", "parsing"] }
 toml.workspace = true
+url.workspace = true
 
 [lints]
 workspace = true

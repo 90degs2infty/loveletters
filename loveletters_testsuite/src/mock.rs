@@ -7,6 +7,7 @@ use proptest::{
 };
 use serde::Serialize;
 use time::OffsetDateTime;
+use url::Url as RawUrl;
 
 fn write_toml<V: Serialize>(value: &V, path: &Path) {
     let toml = toml::to_string_pretty(value).unwrap();
@@ -27,6 +28,10 @@ fn title() -> impl Strategy<Value = String> {
 fn publication() -> impl Strategy<Value = OffsetDateTime> {
     (-377705116800i64..253402300799i64)
         .prop_map(|ts| OffsetDateTime::from_unix_timestamp(ts).expect("range -377705116800i64..253402300799i64 should have contained valid unix timestamps only"))
+}
+
+fn author() -> impl Strategy<Value = String> {
+    "[a-zA-Z0-9]"
 }
 
 #[derive(Debug, Clone)]
@@ -52,14 +57,10 @@ impl Arbitrary for TypstFile {
         Self::valid().boxed()
     }
 }
-
 #[derive(Debug, Clone, Serialize)]
 pub struct LeafFrontmatter {
     title: Option<String>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        with = "time::serde::iso8601::option"
-    )]
+    #[serde(with = "time::serde::iso8601::option")]
     publication: Option<OffsetDateTime>,
 }
 
@@ -106,10 +107,7 @@ impl Arbitrary for LeafFrontmatter {
 #[derive(Debug, Clone, Serialize)]
 pub struct IndexFrontmatter {
     title: Option<String>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        with = "time::serde::iso8601::option"
-    )]
+    #[serde(with = "time::serde::iso8601::option")]
     publication: Option<OffsetDateTime>,
 }
 
@@ -391,6 +389,167 @@ impl Arbitrary for Section {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
 
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        Self::valid().boxed()
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct Url(RawUrl);
+
+impl Url {
+    fn scheme() -> impl Strategy<Value = String> {
+        prop_oneof![Just(String::from("http")), Just(String::from("https")),]
+    }
+
+    fn toplevel_domain() -> impl Strategy<Value = String> {
+        prop_oneof![
+            Just(String::from("org")),
+            Just(String::from("com")),
+            Just(String::from("io")),
+            Just(String::from("dev")),
+        ]
+    }
+
+    fn secondlevel_domain() -> impl Strategy<Value = String> {
+        "[a-z0-9]+"
+    }
+
+    pub fn valid() -> impl Strategy<Value = Self> {
+        (
+            Self::scheme(),
+            Self::secondlevel_domain(),
+            Self::toplevel_domain(),
+        )
+            .prop_map(|(scheme, snd, top)| {
+                Self(
+                    RawUrl::parse(&(scheme + &snd + &top))
+                        .expect("parts should have resembled a valid Url"),
+                )
+            })
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ProjectConfig {
+    title: Option<String>,
+    author: Option<String>,
+    root: Option<Url>,
+}
+
+impl ProjectConfig {
+    pub fn missing_title() -> impl Strategy<Value = Self> {
+        (author(), Url::valid()).prop_map(|(author, url)| Self {
+            title: None,
+            author: Some(author),
+            root: Some(url),
+        })
+    }
+
+    pub fn missing_author() -> impl Strategy<Value = Self> {
+        (title(), Url::valid()).prop_map(|(title, url)| Self {
+            title: Some(title),
+            author: None,
+            root: Some(url),
+        })
+    }
+
+    pub fn missing_root() -> impl Strategy<Value = Self> {
+        (title(), author()).prop_map(|(title, author)| Self {
+            title: Some(title),
+            author: Some(author),
+            root: None,
+        })
+    }
+
+    pub fn invalid() -> impl Strategy<Value = Self> {
+        prop_oneof![
+            Self::missing_title(),
+            Self::missing_author(),
+            Self::missing_root()
+        ]
+    }
+
+    pub fn valid() -> impl Strategy<Value = Self> {
+        (title(), author(), Url::valid()).prop_map(|(title, author, url)| Self {
+            title: Some(title),
+            author: Some(author),
+            root: Some(url),
+        })
+    }
+
+    pub fn write_toml(&self, path: &Path) {
+        write_toml(self, path);
+    }
+}
+
+impl Arbitrary for ProjectConfig {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        Self::valid().boxed()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Project {
+    content: Option<Section>,
+    config: Option<ProjectConfig>,
+}
+
+impl Project {
+    fn general_helper(
+        content: impl Strategy<Value = Option<Section>>,
+        config: impl Strategy<Value = Option<ProjectConfig>>,
+    ) -> impl Strategy<Value = Self> {
+        (content, config).prop_map(|(content, config)| Self { content, config })
+    }
+
+    pub fn general(
+        content: impl Strategy<Value = Section>,
+        config: impl Strategy<Value = ProjectConfig>,
+    ) -> impl Strategy<Value = Self> {
+        Self::general_helper(
+            content.prop_map(Option::Some),
+            config.prop_map(Option::Some),
+        )
+    }
+
+    pub fn missing_content() -> impl Strategy<Value = Self> {
+        Self::general_helper(Just(None), ProjectConfig::valid().prop_map(Option::Some))
+    }
+
+    pub fn missing_config() -> impl Strategy<Value = Self> {
+        Self::general_helper(Section::valid().prop_map(Option::Some), Just(None))
+    }
+
+    pub fn missing_something() -> impl Strategy<Value = Self> {
+        prop_oneof![Self::missing_config(), Self::missing_content()]
+    }
+
+    pub fn valid() -> impl Strategy<Value = Self> {
+        Self::general(Section::valid(), ProjectConfig::valid())
+    }
+
+    pub fn write_to_dir(&self, path: &Path) {
+        let Self { content, config } = self;
+
+        if let Some(content) = content {
+            let content_dir = path.join("content");
+            fs::create_dir(&content_dir).unwrap();
+            content.write_to_dir(&content_dir);
+        }
+
+        if let Some(config) = config {
+            let config_file = path.join("loveletters.toml");
+            config.write_toml(&config_file);
+        }
+    }
+}
+
+impl Arbitrary for Project {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         Self::valid().boxed()
     }
