@@ -1,7 +1,7 @@
-use std::{collections::HashMap, fmt, fs, path::Path};
+use std::{collections::HashMap, fmt, fs, iter, path::Path};
 
 use proptest::{
-    collection::{hash_map, vec},
+    collection::{hash_map, hash_set, vec},
     prelude::{Arbitrary, BoxedStrategy, Just, Strategy, any},
     prop_oneof,
 };
@@ -250,13 +250,10 @@ impl Section {
         //
         // Build a strategy for a leaf section (that is, a section without children sections) first
         // and use prop_recursive to build the recursive structure.
-
-        // A note on keys: luckily, we do not have to take care of unique slugs. HashMap will
-        // implicitly take care of non-unique slugs for pages and subsections.
-        // TODO: this is only true for pages and subsections by themselves. However, there can be
-        // collisions between pages and subsections on write to disk!
+        let max_num_leafs = 10;
+        let max_num_subsecs = 4u8;
         let index = IndexPage::valid().prop_map(Option::Some);
-        let pages = hash_map(Slug::valid(), LeafPage::valid(), 0..10);
+        let pages = hash_map(Slug::valid(), LeafPage::valid(), 0..max_num_leafs);
         let no_children = Just(HashMap::new());
         let leaf_section =
             (index, pages, no_children).prop_map(|(index, pages, sub_sections)| Self {
@@ -266,16 +263,41 @@ impl Section {
             });
 
         leaf_section
-            .prop_recursive(4, 16, 4, |element| {
+            .prop_recursive(4, 16, max_num_subsecs.into(), move |element| {
+                // TODO: given the very small probability of actually encountering slug collisions between pages and subsections,
+                // it might be way cheaper to just go with a local rejection filter to drop instances where there are collisions
+                // instead of below lengthy algorithm.
                 let index = IndexPage::valid().prop_map(Option::Some);
-                let pages = hash_map(Slug::valid(), LeafPage::valid(), 0..10);
+                // Do a dance to avoid key collisions between subsections and pages
+                let sub_content =
+                // First, draw the number of pages and direct sub-sections
+                (0..=max_num_leafs, 0..=max_num_subsecs)
+                    // Generate leaf pages and sub-sections as indicated by counts and draw the same
+                    // total of slugs
+                    .prop_flat_map(move |(num_leafs, num_subsecs)| {
+                        let num_slugs = num_leafs + usize::from(num_subsecs);
+                        let keys = hash_set(Slug::valid(), num_slugs..=num_slugs);
 
-                let children_sections =
-                    vec((Slug::valid(), element), 0..4).prop_map(HashMap::from_iter);
-                (index, pages, children_sections).prop_map(|(index, pages, children)| Self {
+                        (
+                            vec(LeafPage::valid(), num_leafs..=num_leafs),
+                            vec(&element, num_leafs..=num_leafs),
+                            keys,
+                        )
+                    })
+                    // Split the set of slugs for pages and sub-sections and re-arrange both sets
+                    // into hashmaps
+                    .prop_map(|(leafs, subsecs, keys)| {
+                        let mut keys = Vec::from_iter(keys);
+                        let subsec_keys = keys.split_off(leafs.len());
+                        let pages = HashMap::from_iter(iter::zip(keys, leafs));
+                        let sub_sections =
+                            HashMap::from_iter(iter::zip(subsec_keys,subsecs));
+                        (pages, sub_sections)
+                    });
+                (index, sub_content).prop_map(|(index, (pages, sub_sections))| Self {
                     index,
                     pages,
-                    sub_sections: children,
+                    sub_sections,
                 })
             })
             .boxed()
@@ -545,6 +567,9 @@ impl Project {
             config.write_toml(&config_file);
         }
     }
+
+    // TODO: use this tuple of general_helper, general and missing_something for other types as well
+    // TODO: use anyhow instead of unwrap
 }
 
 impl Arbitrary for Project {

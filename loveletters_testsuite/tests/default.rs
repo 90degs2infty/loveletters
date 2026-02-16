@@ -1,6 +1,13 @@
-use loveletters_testsuite::mock::{LeafFrontmatter, LeafPage, Section, TypstFile};
+//! Default set of test cases.
+
+use loveletters_lib::{
+    error::{Error, Result},
+    render_dir,
+};
+use loveletters_testsuite::mock::{LeafFrontmatter, LeafPage, Project, Section, TypstFile};
 use proptest::prelude::*;
 use std::{fs, mem, path::PathBuf};
+use tempfile::{Builder, TempDir};
 
 fn replace_random_leaf(
     section: impl Strategy<Value = Section>,
@@ -28,18 +35,43 @@ fn replace_random_leaf(
         })
 }
 
+fn setup_testcase(project: &Project) -> (TempDir, TempDir) {
+    let input_dir = Builder::new().prefix("loveletters").tempdir().unwrap();
+    let output_dir = Builder::new().prefix("loveletters").tempdir().unwrap();
+    project.write_to_dir(input_dir.as_ref());
+
+    (input_dir, output_dir)
+}
+
+fn render_project(project: &Project) -> (TempDir, TempDir, Result<()>) {
+    let (input, output) = setup_testcase(project);
+    let res = render_dir(&input, &output);
+    (input, output, res)
+}
+
 proptest! {
     #[test]
-    fn write_section(section in replace_random_leaf(
-        any::<Section>(),
-        LeafPage::general(
-            LeafFrontmatter::missing_title().prop_map(Option::Some),
-            any::<TypstFile>().prop_map(Option::Some)
-        )
-    ), dir_name in "[a-z]{6}") {
-        let tmp_dir = PathBuf::from("out").join(dir_name);
-        fs::create_dir(&tmp_dir).unwrap();
-        // let tmp_dir = Builder::new().prefix("loveletters").tempdir().unwrap();
-        section.write_to_dir(tmp_dir.as_ref());
+    fn project_requires_configuration(project in Project::missing_config()) {
+        let (_input, _output, res) = render_project(&project);
+
+        let matches = matches!(
+            res,
+            Err(Error::NotFound { missing: loveletters_lib::error::EntityKind::ProjectConfig, path: _ })
+        );
+
+        prop_assert!(matches)
     }
+
+    #[test]
+    fn project_requires_content(project in Project::missing_content()) {
+        let (_input, _output, res) = render_project(&project);
+
+        let matches = matches!(
+            res,
+            Err(Error::NotFound { missing: loveletters_lib::error::EntityKind::ContentDirectory, path: _ })
+        );
+
+        prop_assert!(matches)
+    }
+
 }

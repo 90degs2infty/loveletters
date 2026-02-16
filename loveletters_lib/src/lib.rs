@@ -22,36 +22,42 @@ use crate::{
     rendering::{Renderer, context::ProjectContext},
     utils::ensure_exists,
 };
-use std::{io::ErrorKind, path::PathBuf};
+use std::{io::ErrorKind, path::Path};
 
 /// Render `loveletters` project at `input_dir` and write rendered output to `output_dir`.
 ///
 /// # Errors
 ///
 /// Returns an [`Error`] when encountering failures states as defined by [`Error`].
-pub fn render_dir(input_dir: PathBuf, output_dir: PathBuf) -> Result<()> {
-    let input_dir = &input_dir.canonicalize().map_err(|e| match e.kind() {
-        ErrorKind::NotFound => Error::NotFound {
-            missing: EntityKind::InputDirectory,
-            path: input_dir,
-        },
-        _ => Error::FileIO {
-            path: Some(input_dir),
-            raw: e,
-        },
-    })?;
+pub fn render_dir(input_dir: impl AsRef<Path>, output_dir: impl AsRef<Path>) -> Result<()> {
+    let input_dir = input_dir
+        .as_ref()
+        .canonicalize()
+        .map_err(|e| match e.kind() {
+            ErrorKind::NotFound => Error::NotFound {
+                missing: EntityKind::InputDirectory,
+                path: input_dir.as_ref().into(),
+            },
+            _ => Error::FileIO {
+                path: Some(input_dir.as_ref().into()),
+                raw: e,
+            },
+        })?;
 
-    let output_dir = &output_dir.canonicalize().map_err(|e| match e.kind() {
-        ErrorKind::NotFound => Error::NotFound {
-            missing: EntityKind::OutputDirectory,
-            path: output_dir,
-        },
-        _ => Error::FileIO {
-            path: Some(output_dir),
-            raw: e,
-        },
-    })?;
-    ensure_exists(output_dir)?;
+    let output_dir = output_dir
+        .as_ref()
+        .canonicalize()
+        .map_err(|e| match e.kind() {
+            ErrorKind::NotFound => Error::NotFound {
+                missing: EntityKind::OutputDirectory,
+                path: output_dir.as_ref().into(),
+            },
+            _ => Error::FileIO {
+                path: Some(output_dir.as_ref().into()),
+                raw: e,
+            },
+        })?;
+    ensure_exists(&output_dir)?;
 
     let content_dir = input_dir.join("content");
 

@@ -15,6 +15,8 @@ use thiserror::Error;
 pub enum EntityKind {
     /// Toplevel input directory containing a self-contained `loveletters` project
     InputDirectory,
+    /// Project subdirectory containing the content-tree
+    ContentDirectory,
     /// Toplevel output directory for compiled content
     OutputDirectory,
     /// Toplevel project configuration file
@@ -29,6 +31,7 @@ impl Display for EntityKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EntityKind::InputDirectory => write!(f, "input directory"),
+            EntityKind::ContentDirectory => write!(f, "content directory"),
             EntityKind::OutputDirectory => write!(f, "output directory"),
             EntityKind::ProjectConfig => write!(f, "project configuration file"),
             EntityKind::TypstRoot => write!(f, "typst root file"),
