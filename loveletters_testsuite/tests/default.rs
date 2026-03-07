@@ -33,6 +33,9 @@ fn replace_random_leaf(
             // pages. Thus, we stick to the filter for the moment. Another approach is to just
             // append a new (invalid) page at some arbitrary location in case one encounters an
             // empty section.
+            //
+            // TODO: implement the second approach, as this is very likely to be encountered in case
+            // of shrinking on a failing testcase!
             .prop_filter("(recursively) empty section, no leaf to replace", |sec| {
                 sec.num_leafs() != 0
             })
@@ -62,6 +65,7 @@ fn render_project(project: &Project) -> (TempDir, TempDir, Result<()>) {
     (input, output, res)
 }
 
+// TODO: use the `test_cases` crate instead of the `proptest!` macro?
 proptest! {
     #[test]
     fn project_requires_configuration(project in Project::missing_config()) {
