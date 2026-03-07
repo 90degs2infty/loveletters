@@ -264,11 +264,22 @@ impl Section {
 
         leaf_section
             .prop_recursive(4, 16, max_num_subsecs.into(), move |element| {
+                // Recursion is a little more involved, as we have to avoid key collisions (i.e. same slugs) across
+                // leaf pages and sub-sections.
+                //
+                // To avoid collisions, we draw the slugs from a common (hash)set. I.e. we
+                // 1. draw the number of leafs and sub-sections to generate,
+                // 2. draw a set of unique slugs with the set's size equal to the number of leafs
+                //    and sub-sections,
+                // 3. "partition" the set of slugs and convert everything into two HashMaps.
+
+                // Let's begin with building the index page.
                 let index = IndexPage::valid().prop_map(Option::Some);
-                // Do a dance to avoid key collisions between subsections and pages
+
+                // Now, let's do the above dance (with order slightly altered for implementation).
                 let sub_content =
-                // First, draw the number of pages and direct sub-sections
-                (0..=max_num_leafs, 0usize..=max_num_subsecs.into(), Just(element))
+                    // First, draw the number of pages and direct sub-sections; element is passed to satisfy the borrow checker.
+                    (0..=max_num_leafs, 0usize..=max_num_subsecs.into(), Just(element))
                     // Generate leaf pages and sub-sections as indicated by counts
                     .prop_flat_map(|(num_leafs, num_subsecs, element)|  {
                         (
@@ -296,6 +307,8 @@ impl Section {
                             HashMap::from_iter(iter::zip(keys,subsecs));
                         (pages, sub_sections)
                     });
+
+                // With all the ingredients available, we can now build the outermost Section.
                 (index, sub_content).prop_map(|(index, (pages, sub_sections))| Self {
                     index,
                     pages,
