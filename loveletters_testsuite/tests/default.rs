@@ -1,13 +1,26 @@
 //! Default set of test cases.
 
 use loveletters_lib::{
-    error::{Error, Result},
+    error::{EntityKind, Error, Result},
     render_dir,
 };
 use loveletters_testsuite::mock::{LeafFrontmatter, LeafPage, Project, Section, TypstFile};
 use proptest::prelude::*;
 use std::{fs, mem, path::PathBuf};
 use tempfile::{Builder, TempDir};
+
+macro_rules! prop_assert_matches {
+    ( $e:expr , $pat:pat ) => {{
+        let matches = matches!($e, $pat);
+
+        prop_assert!(
+            matches,
+            "{:?} does not match pattern {}",
+            $e,
+            stringify!($pat)
+        )
+    }};
+}
 
 fn replace_random_leaf(
     section: impl Strategy<Value = Section>,
@@ -54,24 +67,20 @@ proptest! {
     fn project_requires_configuration(project in Project::missing_config()) {
         let (_input, _output, res) = render_project(&project);
 
-        let matches = matches!(
+        prop_assert_matches!(
             res,
-            Err(Error::NotFound { missing: loveletters_lib::error::EntityKind::ProjectConfig, path: _ })
-        );
-
-        prop_assert!(matches)
+            Err(Error::NotFound { missing: EntityKind::ProjectConfig, path: _ })
+        )
     }
 
     #[test]
     fn project_requires_content(project in Project::missing_content()) {
         let (_input, _output, res) = render_project(&project);
 
-        let matches = matches!(
+        prop_assert_matches!(
             res,
-            Err(Error::NotFound { missing: loveletters_lib::error::EntityKind::ContentDirectory, path: _ })
-        );
-
-        prop_assert!(matches)
+            Err(Error::NotFound { missing: EntityKind::ContentDirectory, path: _ })
+        )
     }
 
 }
