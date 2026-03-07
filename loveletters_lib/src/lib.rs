@@ -22,7 +22,7 @@ use crate::{
     rendering::{Renderer, context::ProjectContext},
     utils::ensure_exists,
 };
-use std::{io::ErrorKind, path::Path};
+use std::path::Path;
 
 /// Render `loveletters` project at `input_dir` and write rendered output to `output_dir`.
 ///
@@ -30,33 +30,21 @@ use std::{io::ErrorKind, path::Path};
 ///
 /// Returns an [`Error`] when encountering failures states as defined by [`Error`].
 pub fn render_dir(input_dir: impl AsRef<Path>, output_dir: impl AsRef<Path>) -> Result<()> {
-    let input_dir = input_dir
-        .as_ref()
-        .canonicalize()
-        .map_err(|e| match e.kind() {
-            ErrorKind::NotFound => Error::NotFound {
-                missing: EntityKind::InputDirectory,
-                path: input_dir.as_ref().into(),
-            },
-            _ => Error::FileIO {
-                path: Some(input_dir.as_ref().into()),
-                raw: e,
-            },
-        })?;
+    let input_dir = input_dir.as_ref().canonicalize().map_err(|e| {
+        Error::from_io_error(
+            e,
+            Some(input_dir.as_ref().into()),
+            EntityKind::InputDirectory,
+        )
+    })?;
 
-    let output_dir = output_dir
-        .as_ref()
-        .canonicalize()
-        .map_err(|e| match e.kind() {
-            ErrorKind::NotFound => Error::NotFound {
-                missing: EntityKind::OutputDirectory,
-                path: output_dir.as_ref().into(),
-            },
-            _ => Error::FileIO {
-                path: Some(output_dir.as_ref().into()),
-                raw: e,
-            },
-        })?;
+    let output_dir = output_dir.as_ref().canonicalize().map_err(|e| {
+        Error::from_io_error(
+            e,
+            Some(output_dir.as_ref().into()),
+            EntityKind::OutputDirectory,
+        )
+    })?;
     ensure_exists(&output_dir)?;
 
     let content_dir = input_dir.join("content");

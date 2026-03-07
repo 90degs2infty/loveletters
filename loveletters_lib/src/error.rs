@@ -3,7 +3,7 @@
 use std::{
     error,
     fmt::{self, Debug, Display},
-    io::Error as IoError,
+    io::{Error as IoError, ErrorKind as IoKind},
     path::{Path, PathBuf},
     result,
 };
@@ -43,7 +43,7 @@ impl Display for EntityKind {
 fn build_desc_fileio(path: Option<&Path>) -> String {
     match path {
         None => String::new(),
-        Some(path) => format!(" for path '{}'", path.display()),
+        Some(path) => format!(" at path '{}'", path.display()),
     }
 }
 
@@ -62,12 +62,13 @@ fn fmt_source_chain(e: &impl error::Error, f: &mut fmt::Formatter<'_>) -> fmt::R
 #[non_exhaustive]
 pub enum Error {
     /// File or directory not found
-    #[error("failed to find {missing} at '{path}'")]
+    // ISSUE(7): is there a way to avoid the allocation when building this error message?
+    #[error("failed to find {missing}{desc}", desc = build_desc_fileio(path.as_deref()))]
     NotFound {
         /// The entity that is missing
         missing: EntityKind,
         /// The path that got searched for the missing entity
-        path: PathBuf,
+        path: Option<PathBuf>,
     },
     /// Invalid slug
     #[error("failed to derive slug for path '{path}'")]
@@ -118,6 +119,19 @@ pub enum Error {
         #[source]
         raw: anyhow::Error,
     },
+}
+
+impl Error {
+    // TODO: Seal calls to this function?
+    pub fn from_io_error(e: IoError, path: Option<PathBuf>, entity: EntityKind) -> Self {
+        match e.kind() {
+            IoKind::NotFound => Error::NotFound {
+                missing: entity,
+                path,
+            },
+            _ => Error::FileIO { path, raw: e },
+        }
+    }
 }
 
 impl fmt::Debug for Error {

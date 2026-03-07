@@ -1,11 +1,13 @@
 use std::{
     collections::HashMap,
+    fs::exists,
+    io::ErrorKind,
     marker::PhantomData,
     path::{Path, PathBuf},
 };
 
 use crate::{
-    error::{Error, Result},
+    error::{EntityKind, Error, Result},
     frontmatter_parsing::PageWithFrontmatter,
     page::{Index, Leaf, Mode},
     section::Section,
@@ -76,10 +78,16 @@ impl Discoverer {
                             path: p.to_path_buf(),
                         }
                     } else {
+                        let path= e.path().map(Path::to_path_buf);
+
+                        if let Some(e) = e.io_error() && e.kind() == ErrorKind::NotFound {
+                            Error::NotFound { missing: EntityKind::Other, path }
+                        } else {
                         Error::FileIO {
-                            path: e.path().map(Path::to_path_buf),
+                            path,
                             raw: e.into(),
                         }
+                    }
                     }
                 })?;
                 // We set min_depth to 2 above, so there will always be a parent - if not, this is a logic bug
