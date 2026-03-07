@@ -24,6 +24,16 @@ impl Discoverer {
     pub fn try_traverse(
         content_dir: &Path,
     ) -> Result<Section<DiscoveredPage<Index>, DiscoveredPage<Leaf>>> {
+        // We eagerly check content_dir for existence. Note that this introduces TOCTOU bugs in case
+        // content_dir is deleted afterwards (but before collecting e.g. leaf pages). However, it
+        // improves error messages in the "ordinary" case, so we accept this risk.
+        if !content_dir.exists() {
+            return Err(Error::NotFound {
+                missing: EntityKind::ContentDirectory,
+                path: Some(content_dir.into()),
+            });
+        }
+
         // TODO: implement recursively to collect sub-sections of arbitrary depth of arbitrary name
         let posts = Discoverer::collect_leaf_pages(&content_dir.join("posts"))?;
         let toplevels = Discoverer::collect_leaf_pages(content_dir)?;
