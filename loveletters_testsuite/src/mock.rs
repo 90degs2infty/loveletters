@@ -264,23 +264,26 @@ impl Section {
 
         leaf_section
             .prop_recursive(4, 16, max_num_subsecs.into(), move |element| {
-                // TODO: given the very small probability of actually encountering slug collisions between pages and subsections,
-                // it might be way cheaper to just go with a local rejection filter to drop instances where there are collisions
-                // instead of below lengthy algorithm.
                 let index = IndexPage::valid().prop_map(Option::Some);
                 // Do a dance to avoid key collisions between subsections and pages
                 let sub_content =
                 // First, draw the number of pages and direct sub-sections
-                (0..=max_num_leafs, 0..=max_num_subsecs)
-                    // Generate leaf pages and sub-sections as indicated by counts and draw the same
-                    // total of slugs
-                    .prop_flat_map(move |(num_leafs, num_subsecs)| {
-                        let num_slugs = num_leafs + usize::from(num_subsecs);
-                        let keys = hash_set(Slug::valid(), num_slugs..=num_slugs);
-
+                (0..=max_num_leafs, 0usize..=max_num_subsecs.into(), Just(element))
+                    // Generate leaf pages and sub-sections as indicated by counts
+                    .prop_flat_map(|(num_leafs, num_subsecs, element)|  {
                         (
                             vec(LeafPage::valid(), num_leafs..=num_leafs),
-                            vec(&element, num_leafs..=num_leafs),
+                            vec(element, num_subsecs..=num_subsecs),
+                        )
+                    }
+                    )
+                    // Draw the required set of slugs
+                    .prop_flat_map(|(leafs, subsecs)| {
+                        let num_slugs = leafs.len() + subsecs.len();
+                        let keys = hash_set(Slug::valid(), num_slugs..=num_slugs);
+                        (
+                            Just(leafs),
+                            Just(subsecs),
                             keys,
                         )
                     })
@@ -288,10 +291,9 @@ impl Section {
                     // into hashmaps
                     .prop_map(|(leafs, subsecs, keys)| {
                         let mut keys = Vec::from_iter(keys);
-                        let subsec_keys = keys.split_off(leafs.len());
-                        let pages = HashMap::from_iter(iter::zip(keys, leafs));
+                        let pages = HashMap::from_iter(iter::zip(keys.drain(..leafs.len()), leafs));
                         let sub_sections =
-                            HashMap::from_iter(iter::zip(subsec_keys,subsecs));
+                            HashMap::from_iter(iter::zip(keys,subsecs));
                         (pages, sub_sections)
                     });
                 (index, sub_content).prop_map(|(index, (pages, sub_sections))| Self {
