@@ -460,7 +460,7 @@ impl Url {
         )
             .prop_map(|(scheme, snd, top)| {
                 Self(
-                    RawUrl::parse(&(scheme + &snd + &top))
+                    RawUrl::parse(&format!("{scheme}://{snd}.{top}"))
                         .expect("parts should have resembled a valid Url"),
                 )
             })
