@@ -412,45 +412,51 @@ impl Section {
         self.leafs_mut().skip(idx).next()
     }
 
-    // /// Number of (sub-)sections including `self`.
-    // pub fn num_sections(&self) -> usize {
-    //     1 + self
-    //         .sub_sections
-    //         .values()
-    //         .fold(0, |acc, sec| acc + sec.num_sections())
-    // }
+    /// Number of (sub-)sections including `self`.
+    pub fn num_sections(&self) -> usize {
+        1 + self
+            .sub_sections
+            .values()
+            .fold(0, |acc, sec| acc + sec.num_sections())
+    }
 
-    // /// The first item in the returned iterator yields this [`Section`] itself.
-    // ///
-    // /// No guarantees on the order of traversal.
-    // pub fn sections(&self) -> impl Iterator<Item = &Self> {
-    //     once(self).chain(self.sub_sections.values().map(Self::sections).flatten())
-    // }
+    /// The first item in the returned iterator yields this [`Section`] itself.
+    ///
+    /// No guarantees on the order of traversal.
+    pub fn sections(&self) -> Box<dyn Iterator<Item = &Self> + '_> {
+        Box::new(iter::once(self).chain(self.sub_sections.values().map(Self::sections).flatten()))
+    }
 
-    // /// Subsections contained in this [`Section`].
-    // ///
-    // /// Note that in contrast to [`Section::sections`], this [`Section`] itself is not yielded by
-    // /// the returned iterator.
-    // ///
-    // /// No guarantees on the order of traversal.
-    // pub fn subsections_mut(&mut self) -> impl Iterator<Item = &mut Self> {
-    //     self.sub_sections
-    //         .values_mut()
-    //         .map(Self::subsections_mut)
-    //         .flatten()
-    // }
+    /// Subsections contained in this [`Section`].
+    ///
+    /// Note that in contrast to [`Section::sections`], this [`Section`] itself is not yielded by
+    /// the returned iterator.
+    ///
+    /// No guarantees on the order of traversal.
+    pub fn subsections_mut(&mut self) -> Box<dyn Iterator<Item = &mut Self> + '_> {
+        Box::new(
+            self.sub_sections
+                .values_mut()
+                .map(Self::subsections_mut)
+                .flatten(),
+        )
+    }
 
-    // pub fn section_at(&self, idx: usize) -> Option<&Self> {
-    //     self.sections().skip(idx).next()
-    // }
+    pub fn section_at(&self, idx: usize) -> Option<&Self> {
+        self.sections().skip(idx).next()
+    }
 
-    // pub fn section_at_mut(&mut self, idx: usize) -> Option<&mut Self> {
-    //     if idx == 0 {
-    //         return Some(self);
-    //     }
+    pub fn section_at_mut(&mut self, idx: usize) -> Option<&mut Self> {
+        if idx == 0 {
+            return Some(self);
+        }
 
-    //     self.subsections_mut().skip(idx - 1).next()
-    // }
+        self.subsections_mut().skip(idx - 1).next()
+    }
+
+    pub fn insert_leaf(&mut self, slug: Slug, leaf: LeafPage) -> Option<LeafPage> {
+        self.pages.insert(slug, leaf)
+    }
 }
 
 impl Arbitrary for Section {
