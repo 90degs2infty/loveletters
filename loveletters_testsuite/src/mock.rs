@@ -406,7 +406,7 @@ impl Section {
     }
 
     pub fn leaf_at(&self, idx: usize) -> Option<&LeafPage> {
-        self.leafs().skip(idx).next()
+        self.leafs().nth(idx)
     }
 
     // Boxing is required to make types non-recursive and pass the compiler
@@ -422,7 +422,7 @@ impl Section {
     }
 
     pub fn leaf_at_mut(&mut self, idx: usize) -> Option<&mut LeafPage> {
-        self.leafs_mut().skip(idx).next()
+        self.leafs_mut().nth(idx)
     }
 
     /// Number of (sub-)sections including `self`.
@@ -585,29 +585,19 @@ pub struct Project {
 }
 
 impl Project {
-    fn general_helper(
+    pub fn general(
         content: impl Strategy<Value = Option<Section>>,
         config: impl Strategy<Value = Option<ProjectConfig>>,
     ) -> impl Strategy<Value = Self> {
         (content, config).prop_map(|(content, config)| Self { content, config })
     }
 
-    pub fn general(
-        content: impl Strategy<Value = Section>,
-        config: impl Strategy<Value = ProjectConfig>,
-    ) -> impl Strategy<Value = Self> {
-        Self::general_helper(
-            content.prop_map(Option::Some),
-            config.prop_map(Option::Some),
-        )
-    }
-
     pub fn missing_content() -> impl Strategy<Value = Self> {
-        Self::general_helper(Just(None), ProjectConfig::valid().prop_map(Option::Some))
+        Self::general(Just(None), ProjectConfig::valid().prop_map(Option::Some))
     }
 
     pub fn missing_config() -> impl Strategy<Value = Self> {
-        Self::general_helper(Section::valid().prop_map(Option::Some), Just(None))
+        Self::general(Section::valid().prop_map(Option::Some), Just(None))
     }
 
     pub fn missing_something() -> impl Strategy<Value = Self> {
@@ -615,7 +605,10 @@ impl Project {
     }
 
     pub fn valid() -> impl Strategy<Value = Self> {
-        Self::general(Section::valid(), ProjectConfig::valid())
+        Self::general(
+            Section::valid().prop_map(Option::Some),
+            ProjectConfig::valid().prop_map(Option::Some),
+        )
     }
 
     pub fn write_to_dir(&self, path: &Path) {
