@@ -248,7 +248,7 @@ impl Section {
     // TODO to be removed, once content discovery is more general
     pub fn toplevel_and_posts() -> impl Strategy<Value = Self> {
         let max_num_posts = 10;
-        let index = IndexPage::valid().prop_map(Presence::Given);
+        let index = IndexPage::valid().prop_map(Option::Some);
         let pages = hash_map(Slug::valid(), LeafPage::valid(), 0..max_num_posts);
 
         let posts_sec = (index, pages).prop_map(|(index, pages)| Self {
@@ -258,7 +258,7 @@ impl Section {
         });
 
         let max_num_toplevels = 10;
-        let index = IndexPage::valid().prop_map(Presence::Given);
+        let index = IndexPage::valid().prop_map(Option::Some);
         // TODO: have to guard against slug "posts"
         let pages = hash_map(Slug::valid(), LeafPage::valid(), 0..max_num_toplevels);
 
