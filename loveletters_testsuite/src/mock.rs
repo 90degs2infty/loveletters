@@ -245,6 +245,37 @@ pub struct Section {
 }
 
 impl Section {
+    // TODO to be removed, once content discovery is more general
+    pub fn toplevel_and_posts() -> impl Strategy<Value = Self> {
+        let max_num_posts = 10;
+        let index = IndexPage::valid().prop_map(Presence::Given);
+        let pages = hash_map(Slug::valid(), LeafPage::valid(), 0..max_num_posts);
+
+        let posts_sec = (index, pages).prop_map(|(index, pages)| Self {
+            index,
+            pages,
+            sub_sections: HashMap::new(),
+        });
+
+        let max_num_toplevels = 10;
+        let index = IndexPage::valid().prop_map(Presence::Given);
+        // TODO: have to guard against slug "posts"
+        let pages = hash_map(Slug::valid(), LeafPage::valid(), 0..max_num_toplevels);
+
+        let sec = (index, pages, posts_sec).prop_map(|(index, pages, posts)| {
+            let mut sub_sections = HashMap::new();
+            sub_sections.insert(Slug("posts".to_owned()), posts);
+
+            Self {
+                index,
+                pages,
+                sub_sections,
+            }
+        });
+
+        sec
+    }
+
     pub fn valid() -> impl Strategy<Value = Self> {
         // Inspired by the book: https://proptest-rs.github.io/proptest/proptest/tutorial/recursive.html
         //
