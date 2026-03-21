@@ -57,6 +57,11 @@ impl Arbitrary for TypstFile {
         Self::valid().boxed()
     }
 }
+
+trait Named {
+    const name: &'static str;
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct LeafFrontmatter {
     title: Option<String>,
@@ -102,6 +107,10 @@ impl Arbitrary for LeafFrontmatter {
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         Self::valid().boxed()
     }
+}
+
+impl Named for LeafFrontmatter {
+    const name: &'static str = "page";
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -151,6 +160,10 @@ impl Arbitrary for IndexFrontmatter {
     }
 }
 
+impl Named for IndexFrontmatter {
+    const name: &'static str = "index";
+}
+
 #[derive(Debug, Clone)]
 pub struct Page<F> {
     frontmatter: Option<F>,
@@ -186,7 +199,7 @@ where
 
 impl<F> Page<F>
 where
-    F: Serialize,
+    F: Serialize + Named,
 {
     pub fn write_to_dir(&self, dir: &Path) {
         let Self {
@@ -195,11 +208,11 @@ where
         } = self;
 
         if let Some(frontmatter) = frontmatter {
-            write_toml(&frontmatter, &dir.join("page.toml"));
+            write_toml(&frontmatter, &dir.join(format!("{}.toml", F::name)));
         }
 
         if let Some(root_file) = root_file {
-            root_file.write_typ(&dir.join("page.typ"));
+            root_file.write_typ(&dir.join(format!("{}.typ", F::name)));
         }
     }
 }
