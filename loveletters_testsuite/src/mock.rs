@@ -440,31 +440,35 @@ impl Section {
         Box::new(iter::once(self).chain(self.sub_sections.values().map(Self::sections).flatten()))
     }
 
-    /// Subsections contained in this [`Section`].
-    ///
-    /// Note that in contrast to [`Section::sections`], this [`Section`] itself is not yielded by
-    /// the returned iterator.
-    ///
-    /// No guarantees on the order of traversal.
-    pub fn subsections_mut(&mut self) -> Box<dyn Iterator<Item = &mut Self> + '_> {
-        Box::new(
-            self.sub_sections
-                .values_mut()
-                .map(Self::subsections_mut)
-                .flatten(),
-        )
-    }
-
     pub fn section_at(&self, idx: usize) -> Option<&Self> {
-        self.sections().skip(idx).next()
+        self.sections().nth(idx)
     }
 
     pub fn section_at_mut(&mut self, idx: usize) -> Option<&mut Self> {
+        // Unfortunately, the borrow checker prevents a solution relying on a chain of iterators
+        // (as we need to return &mut self but also need &mut self to recurse into sub-sections).
+        //
+        // This is why we resort to an implementation which "enumerates sub-sections by hand".
+        // Note that the implementation as it stands is not particularly fast, as the sub-trees
+        // are iterated over and over again to compute the number of sections contained. For the
+        // moment, we don't care too much about performance and keep this implementation anyway.
         if idx == 0 {
             return Some(self);
         }
 
-        self.subsections_mut().skip(idx - 1).next()
+        // - 1 since 0 points to self.
+        let mut sub_idx = idx - 1;
+
+        for sub_sec in self.sub_sections.values_mut() {
+            let num_sub_sec = sub_sec.num_sections();
+            if sub_idx < num_sub_sec {
+                return Some(sub_sec);
+            } else {
+                sub_idx -= num_sub_sec;
+            }
+        }
+
+        None
     }
 
     pub fn insert_leaf(&mut self, slug: Slug, leaf: LeafPage) -> Option<LeafPage> {
