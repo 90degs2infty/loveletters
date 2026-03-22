@@ -90,6 +90,7 @@ fn render_project(project: &Project) -> (TempDir, TempDir, Result<()>) {
     let res = render_dir(&input, &output);
     (input, output, res)
 }
+
 #[proptest]
 fn project_requires_configuration(#[strategy(Project::missing_config())] project: Project) {
     let (_input, _output, res) = render_project(&project);
@@ -103,21 +104,6 @@ fn project_requires_configuration(#[strategy(Project::missing_config())] project
     )
 }
 
-#[proptest]
-fn project_requires_content(#[strategy(Project::missing_content())] project: Project) {
-    let (_input, _output, res) = render_project(&project);
-
-    prop_assert_matches!(
-        res,
-        Err(Error::NotFound {
-            missing: EntityKind::ContentDirectory,
-            path: _
-        })
-    )
-}
-
-// TODO: does it make more sense to have dedicated test cases for distinct cases of broken project configs?
-// Given the number of iterations during test case execution: probably not
 #[proptest]
 fn project_requires_valid_frontmatter(
     #[strategy(
@@ -135,6 +121,19 @@ fn project_requires_valid_frontmatter(
         Err(Error::MalformedProjectConfig {
             location: _,
             raw: _
+        })
+    )
+}
+
+#[proptest]
+fn project_requires_content(#[strategy(Project::missing_content())] project: Project) {
+    let (_input, _output, res) = render_project(&project);
+
+    prop_assert_matches!(
+        res,
+        Err(Error::NotFound {
+            missing: EntityKind::ContentDirectory,
+            path: _
         })
     )
 }
@@ -166,11 +165,78 @@ fn leaf_page_requires_valid_frontmatter(
     )
 }
 
-// Further test cases
-//
-// - page inside section directory
-// - broken project config
-//   - subcases individually or the general invalid strategy?
-// - section without index page (should not error, but not create any output for said section)
-// - section with broken index front matter
-// - leaf page without frontmatter file (should not error, but not create any output for said page)
+#[proptest]
+fn leaf_page_requires_valid_typst_source() {
+    prop_assert!(false)
+}
+
+// TODO: as of now, the rendering of typst content is rather slow. Improve processing speed and
+// increase the number of cases to the default again.
+#[proptest(ProptestConfig { cases : 10, ..ProptestConfig::default() })]
+fn leaf_page_requires_typst_source_file(
+    #[strategy(
+        Project::general(
+            replace_random_leaf(
+                Section::toplevel_and_posts(),
+                LeafPage::general(
+                    LeafFrontmatter::valid().prop_map(Option::Some),
+                    Just(None),
+                )
+            ).prop_map(Option::Some),
+            ProjectConfig::valid().prop_map(Option::Some)
+        )
+    )]
+    project: Project,
+) {
+    let (_input, _output, res) = render_project(&project);
+
+    prop_assert_matches!(
+        res,
+        Err(Error::NotFound {
+            missing: EntityKind::TypstRoot,
+            path: _,
+        })
+    )
+}
+
+#[proptest]
+fn leaf_page_lacking_frontmatter_is_ignored() {
+    prop_assert!(false)
+}
+
+#[proptest]
+fn leaf_page_in_section_directory_is_ignored() {
+    prop_assert!(false)
+}
+
+#[proptest]
+fn section_without_index_frontmatter_is_ignored() {
+    // only index frontmatter missing (i.e. there is Some(IndexPage))
+    prop_assert!(false)
+}
+
+#[proptest]
+fn section_without_index_page_is_ignored() {
+    // entire page missing (i.e. None)
+    prop_assert!(false)
+}
+
+#[proptest]
+fn section_index_page_requires_valid_frontmatter() {
+    prop_assert!(false)
+}
+
+#[proptest]
+fn section_index_page_requires_valid_typst_source() {
+    prop_assert!(false)
+}
+
+#[proptest]
+fn section_index_page_requires_typst_source_file() {
+    prop_assert!(false)
+}
+
+#[proptest]
+fn valid_input_maps_to_valid_output() {
+    prop_assert!(false)
+}
