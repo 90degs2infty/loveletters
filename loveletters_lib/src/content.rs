@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use time::{OffsetDateTime, PrimitiveDateTime};
+use time::{Date, PrimitiveDateTime, Time};
 use typst::foundations::{Datetime, Dict, IntoValue, Value};
 
 // TODO: dedicated module?
@@ -7,8 +7,7 @@ use typst::foundations::{Datetime, Dict, IntoValue, Value};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct IndexFrontmatter {
     title: String,
-    #[serde(with = "time::serde::iso8601")]
-    publication: OffsetDateTime,
+    publication: Date,
     // TODO expiry: OffsetDateTime,
 }
 
@@ -20,10 +19,10 @@ impl IndexFrontmatter {
         d.insert("title".into(), Value::Str(title.as_str().into()));
         d.insert(
             "publication".into(),
-            Value::Datetime(Datetime::Datetime(
-                // TODO is this the intended way to (serde) deserialize a date and get a datetime from it?
-                PrimitiveDateTime::new(publication.date(), publication.time()),
-            )),
+            Value::Datetime(Datetime::Datetime(PrimitiveDateTime::new(
+                *publication,
+                Time::MIDNIGHT,
+            ))),
         );
         Value::Dict(d)
     }
@@ -38,8 +37,7 @@ impl IntoValue for &IndexFrontmatter {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LeafFrontmatter {
     title: String,
-    #[serde(with = "time::serde::iso8601")]
-    publication: OffsetDateTime,
+    publication: Date,
     // TODO expiry: OffsetDateTime,
 }
 
@@ -51,10 +49,10 @@ impl LeafFrontmatter {
         d.insert("title".into(), Value::Str(title.as_str().into()));
         d.insert(
             "publication".into(),
-            Value::Datetime(Datetime::Datetime(
-                // TODO is this the intended way to (serde) deserialize a date and get a datetime from it?
-                PrimitiveDateTime::new(publication.date(), publication.time()),
-            )),
+            Value::Datetime(Datetime::Datetime(PrimitiveDateTime::new(
+                *publication,
+                Time::MIDNIGHT,
+            ))),
         );
         Value::Dict(d)
     }
@@ -63,5 +61,67 @@ impl LeafFrontmatter {
 impl IntoValue for &LeafFrontmatter {
     fn into_value(self) -> Value {
         self.to_typst()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use lattice::IntoDefect;
+    use loveletters_mock::leaf::Frontmatter as MockLeafFrontmatter;
+    use proptest::prelude::Strategy;
+    use test_strategy::proptest;
+
+    use crate::content::LeafFrontmatter;
+
+    #[derive(Debug)]
+    struct UnexpectedResult<T, E> {
+        inner: Result<T, E>,
+    }
+
+    #[proptest]
+    fn leaf_frontmatter_deserializes_valid_str(
+        #[strategy(
+            MockLeafFrontmatter::builder().build()
+        )]
+        mock: MockLeafFrontmatter,
+    ) {
+        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let _: LeafFrontmatter = toml::from_str(&toml)?;
+    }
+
+    #[proptest]
+    fn leaf_frontmatter_rejects_missing_publication(
+        #[strategy(
+            MockLeafFrontmatter::builder().without_publication().build()
+        )]
+        mock: MockLeafFrontmatter,
+    ) {
+        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let _: LeafFrontmatter = toml::from_str(&toml)?;
+        // TODO assert the right thing
+    }
+
+    #[proptest]
+    fn leaf_frontmatter_rejects_missing_title(
+        #[strategy(
+            MockLeafFrontmatter::builder().without_title().build()
+        )]
+        mock: MockLeafFrontmatter,
+    ) {
+        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let _: LeafFrontmatter = toml::from_str(&toml)?;
+        // TODO assert the right thing
+    }
+
+    #[proptest]
+    fn leaf_frontmatter_rejects_invalid_publication(
+        #[strategy(
+            MockLeafFrontmatter::builder().with_publication("[a-z]{4}".into_defect().boxed()).build()
+        )]
+        mock: MockLeafFrontmatter,
+    ) {
+        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let _: LeafFrontmatter = toml::from_str(&toml)?;
+        // TODO assert the right thing
     }
 }

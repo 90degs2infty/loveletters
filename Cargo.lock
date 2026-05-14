@@ -1272,6 +1272,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "lattice"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "serde",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.177"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1363,8 +1371,12 @@ dependencies = [
  "anyhow",
  "bytes",
  "const_format",
+ "lattice",
+ "loveletters_mock",
+ "proptest",
  "serde",
  "tar",
+ "test-strategy",
  "thiserror",
  "time",
  "toml 0.9.8",
@@ -1375,6 +1387,16 @@ dependencies = [
  "url",
  "walkdir",
  "zune-inflate",
+]
+
+[[package]]
+name = "loveletters_mock"
+version = "0.1.0"
+dependencies = [
+ "lattice",
+ "proptest",
+ "serde",
+ "time",
 ]
 
 [[package]]

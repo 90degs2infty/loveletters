@@ -5,7 +5,7 @@ use loveletters_lib::{
     error::{EntityKind, Error, Result},
     render_dir,
 };
-use loveletters_testsuite::mock::{
+use loveletters_testsuite::mock_outdated::{
     LeafFrontmatter, LeafPage, Project, ProjectConfig, Section, Slug, TypstFile,
 };
 use proptest::{prelude::*, test_runner::TestCaseResult};
@@ -222,9 +222,31 @@ fn leaf_page_requires_typst_source_file(
     )
 }
 
-#[proptest]
-fn leaf_page_lacking_frontmatter_is_ignored() {
-    prop_assert!(false)
+// TODO: as of now, the rendering of typst content is rather slow. Improve processing speed and
+// increase the number of cases to the default again.
+#[proptest(ProptestConfig { cases : 10, ..ProptestConfig::default() })]
+fn leaf_page_lacking_frontmatter_is_ignored(
+    #[strategy(
+        Project::general(
+            replace_random_leaf(
+                Section::toplevel_and_posts(),
+                LeafPage::general(
+                    Just(None),
+                    TypstFile::valid().prop_map(Option::Some),
+                )
+            ).prop_map(Option::Some),
+            ProjectConfig::valid().prop_map(Option::Some)
+        )
+    )]
+    project: Project,
+) {
+    let (_input, out_dir, res) = render_project(&project);
+
+    prop_assert_matches!(res, Ok(()));
+
+    project
+        .verify_output_bundle_present(out_dir.as_ref())
+        .map_err(anyhow_into_proptest)?
 }
 
 #[ignore = "with the current processing, the toplevel `index.html` cannot be attributed exactly one of the toplevel section or the sole leaf page"]
@@ -264,9 +286,28 @@ fn leaf_page_in_section_directory_is_ignored(
 }
 
 #[proptest]
-fn section_without_index_frontmatter_is_ignored() {
+fn section_without_index_frontmatter_is_ignored(
+    #[strategy(Project::general(
+        Section::toplevel_and_posts().prop_map(Option::Some),
+        ProjectConfig::valid().prop_map(Option::Some)
+    ).prop_flat_map(|p| {
+        let num_sections = p.content().expect("valid project should have content").num_sections();
+        // TODO empty case
+        (Just(p), 0..num_sections).prop_map(|(mut p, idx)| {
+            let _ = p.content_mut().expect("valid project should have content").section_at_mut(idx).expect("index should point to valid subsection").index_mut().expect("valid section should have index page").without_frontmatter();
+            p
+        })
+    }))]
+    project: Project,
+) {
     // only index frontmatter missing (i.e. there is Some(IndexPage))
-    prop_assert!(false)
+    let (_input, out_dir, res) = render_project(&project);
+
+    prop_assert_matches!(res, Ok(()));
+
+    project
+        .verify_output_bundle_present(out_dir.as_ref())
+        .map_err(anyhow_into_proptest)?
 }
 
 #[proptest]

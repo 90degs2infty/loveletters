@@ -191,6 +191,28 @@ pub struct Page<F> {
     root_file: Option<TypstFile>,
 }
 
+impl<F> Page<F> {
+    pub fn without_frontmatter(&mut self) -> &mut Self {
+        self.frontmatter = None;
+        self
+    }
+
+    pub fn with_frontmatter(&mut self, frontmatter: F) -> &mut Self {
+        self.frontmatter = Some(frontmatter);
+        self
+    }
+
+    pub fn without_typst_source(&mut self) -> &mut Self {
+        self.root_file = None;
+        self
+    }
+
+    pub fn with_typst_source(&mut self, typst: TypstFile) -> &mut Self {
+        self.root_file = Some(typst);
+        self
+    }
+}
+
 impl<F> Page<F>
 where
     F: fmt::Debug,
@@ -429,6 +451,24 @@ impl Section {
                 })
             })
             .boxed()
+    }
+
+    pub fn index(&self) -> Option<&IndexPage> {
+        self.index.as_ref()
+    }
+
+    pub fn index_mut(&mut self) -> Option<&mut IndexPage> {
+        self.index.as_mut()
+    }
+
+    pub fn with_index_page(&mut self, p: IndexPage) -> &mut Self {
+        self.index = Some(p);
+        self
+    }
+
+    pub fn without_index_page(&mut self) -> &mut Self {
+        self.index = None;
+        self
     }
 
     pub fn write_to_dir(&self, path: &Path) {
@@ -771,6 +811,14 @@ impl Project {
             .context("toplevel section should be present")?
             .verify_output_bundle_present(path)
             .context("while checking loveletters project")
+    }
+
+    pub fn content(&self) -> Option<&Section> {
+        self.content.as_ref()
+    }
+
+    pub fn content_mut(&mut self) -> Option<&mut Section> {
+        self.content.as_mut()
     }
 
     // TODO: use this tuple of general_helper, general and missing_something for other types as well

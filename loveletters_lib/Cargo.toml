@@ -30,5 +30,11 @@ url = { workspace = true, features = ["serde"] }
 walkdir.workspace = true
 zune-inflate.workspace = true
 
+[dev-dependencies]
+lattice.workspace = true
+loveletters_mock.workspace = true
+proptest.workspace = true
+test-strategy.workspace = true
+
 [lints]
 workspace = true

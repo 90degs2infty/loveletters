@@ -96,13 +96,11 @@ pub enum Error {
         raw: anyhow::Error,
     },
     /// Malformed frontmatter
-    #[error("failed to parse frontmatter from '{location}'")]
+    #[error("failed to parse frontmatter")]
     MalformedFrontmatter {
-        /// The erroneous frontmatter's filesystem location
-        location: PathBuf,
         /// The underlying error
         #[source]
-        raw: anyhow::Error,
+        raw: Box<dyn std::error::Error>,
     },
     /// Malformed project structure
     #[error("detected malformed project structure at '{path}'")]
@@ -119,7 +117,16 @@ pub enum Error {
         #[source]
         raw: anyhow::Error,
     },
+    /// Decorator indicating the erroneous path
+    #[error("while working on {path}")]
+    AtPath {
+        path: PathBuf,
+        #[source]
+        raw: Box<Self>,
+    },
 }
+
+// TODO: drop all paths in above variants and use AtPath instead
 
 impl Error {
     // TODO: Seal calls to this function?
@@ -130,6 +137,13 @@ impl Error {
                 path,
             },
             _ => Error::FileIO { path, raw: e },
+        }
+    }
+
+    pub fn at(self, path: PathBuf) -> Self {
+        Self::AtPath {
+            path,
+            raw: Box::new(self),
         }
     }
 }

@@ -1,5 +1,4 @@
-pub mod lattice;
-pub mod mock;
+pub mod mock_outdated;
 pub mod util;
 
 pub fn add(left: u64, right: u64) -> u64 {

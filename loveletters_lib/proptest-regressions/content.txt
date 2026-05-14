@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 96f4850f4f269a3598bb9837f6289d912ea9ffd3c62378a687501b3b3c8338b5 # shrinks to input = _LeafFrontmatterDeserializesValidStrArgs { mock: Frontmatter { publication: Occupied(Correct(1970-01-01 0:00:00.0 +00)), title: Occupied(Correct(Title(""))) } }
