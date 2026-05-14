@@ -1,3 +1,4 @@
+pub mod lattice;
 pub mod mock;
 pub mod util;
 
