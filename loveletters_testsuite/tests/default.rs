@@ -1,5 +1,6 @@
 //! Default set of test cases.
 
+use anyhow::Error as AError;
 use loveletters_lib::{
     error::{EntityKind, Error, Result},
     render_dir,
@@ -7,7 +8,7 @@ use loveletters_lib::{
 use loveletters_testsuite::mock::{
     LeafFrontmatter, LeafPage, Project, ProjectConfig, Section, Slug, TypstFile,
 };
-use proptest::prelude::*;
+use proptest::{prelude::*, test_runner::TestCaseResult};
 use std::mem;
 use tempfile::{Builder, TempDir};
 use test_strategy::proptest;
@@ -23,6 +24,10 @@ macro_rules! prop_assert_matches {
             stringify!($pat)
         )
     }};
+}
+
+fn anyhow_into_proptest(e: AError) -> TestCaseError {
+    TestCaseError::fail(format!("{e:#}"))
 }
 
 #[derive(Debug)]
@@ -165,9 +170,27 @@ fn leaf_page_requires_valid_frontmatter(
     )
 }
 
-#[proptest]
-fn leaf_page_requires_valid_typst_source() {
-    prop_assert!(false)
+// TODO: as of now, the rendering of typst content is rather slow. Improve processing speed and
+// increase the number of cases to the default again.
+#[proptest(ProptestConfig { cases : 10, ..ProptestConfig::default() })]
+fn leaf_page_requires_valid_typst_source(
+    #[strategy(
+        Project::general(
+            replace_random_leaf(
+                Section::toplevel_and_posts(),
+                LeafPage::general(
+                    LeafFrontmatter::valid().prop_map(Option::Some),
+                    TypstFile::invalid().prop_map(Option::Some)
+                )
+            ).prop_map(Option::Some),
+            ProjectConfig::valid().prop_map(Option::Some)
+        )
+    )]
+    project: Project,
+) {
+    let (_input, _output, res) = render_project(&project);
+
+    prop_assert_matches!(res, Err(Error::Compilation { page: _, raw: _ }))
 }
 
 // TODO: as of now, the rendering of typst content is rather slow. Improve processing speed and
@@ -204,9 +227,40 @@ fn leaf_page_lacking_frontmatter_is_ignored() {
     prop_assert!(false)
 }
 
-#[proptest]
-fn leaf_page_in_section_directory_is_ignored() {
-    prop_assert!(false)
+#[ignore = "with the current processing, the toplevel `index.html` cannot be attributed exactly one of the toplevel section or the sole leaf page"]
+// TODO: as of now, the rendering of typst content is rather slow. Improve processing speed and
+// increase the number of cases to the default again.
+#[proptest(ProptestConfig { cases: 10, ..ProptestConfig::default()})]
+fn leaf_page_in_section_directory_is_ignored(
+    #[strategy(Project::general(
+        Section::toplevel_and_posts().prop_map(Option::Some),
+        ProjectConfig::valid().prop_map(Option::Some)
+    ))]
+    project: Project,
+    #[strategy(LeafPage::valid())] leaf: LeafPage,
+) -> TestCaseResult {
+    let (in_dir, out_dir) = setup_testcase(&project);
+
+    // TODO to improve coverage, consider writing the leaf page to some arbitrary section somewhere
+    // within the content tree (not always the root section).
+    leaf.write_to_dir(&in_dir.as_ref().join("content"));
+
+    let res = render_dir(&in_dir, &out_dir);
+    prop_assert_matches!(res, Ok(()));
+    let () = project
+        .verify_output_bundle_present(out_dir.as_ref())
+        .map_err(anyhow_into_proptest)?;
+
+    // TODO: everything except the index page has to be missing. However, the index page exists
+    // because of the toplevel section's index page being placed at the root output directory.
+    //
+    // Improve testability by separating content discovery (and checking that the leaf page is
+    // missing from the discovered content) from content rendering.
+    let () = leaf
+        .verify_output_bundle_missing(out_dir.as_ref())
+        .map_err(|e| e.context("while checking sole leaf page"))
+        .map_err(anyhow_into_proptest)?;
+    Ok(())
 }
 
 #[proptest]
@@ -240,3 +294,12 @@ fn section_index_page_requires_typst_source_file() {
 fn valid_input_maps_to_valid_output() {
     prop_assert!(false)
 }
+
+// TODO: once content discovery has been generalized to arbitrary content structures,
+// rework your testcases: testcases targeting content discovery should remain "complex" in
+// structure (i.e. use a recursive strategy), testcases targeting other functionality should be
+// simplified to e.g. single-section single-leaf content trees.
+
+// TODO (separate issue/PR): split processing into content discovery and rendering. Then implement
+// the testcases ignored above. Also, identify the testcases targeting content discovery and skip
+// rendering for those.

@@ -1,5 +1,11 @@
-use std::{collections::HashMap, fmt, fs, iter, path::Path};
+use std::{
+    collections::HashMap,
+    fmt, fs, iter,
+    ops::Not,
+    path::{Path, PathBuf},
+};
 
+use anyhow::{Context, Result};
 use proptest::{
     collection::{hash_map, hash_set, vec},
     prelude::{Arbitrary, BoxedStrategy, Just, Strategy, any},
@@ -42,6 +48,21 @@ pub struct TypstFile {
 impl TypstFile {
     pub fn valid() -> impl Strategy<Value = Self> {
         BASIC_MARKUP_STRATEGY.prop_map(|content| TypstFile { content })
+    }
+
+    pub fn reference_to_unknown_variable() -> impl Strategy<Value = Self> {
+        "#[a-zA-Z]{30}".prop_map(|content| TypstFile { content })
+    }
+
+    pub fn unclosed_inline_code() -> impl Strategy<Value = Self> {
+        "`[a-zA-Z]*".prop_map(|content| TypstFile { content })
+    }
+
+    pub fn invalid() -> impl Strategy<Value = Self> {
+        prop_oneof![
+            Self::reference_to_unknown_variable(),
+            Self::unclosed_inline_code()
+        ]
     }
 
     pub fn write_typ(&self, path: &Path) {
@@ -217,6 +238,48 @@ where
     }
 }
 
+impl<F> Page<F> {
+    fn files_in_output_bundle(&self) -> Vec<PathBuf> {
+        vec![
+            // html root file
+            PathBuf::from("index.html".to_owned()),
+        ]
+    }
+
+    pub fn verify_output_bundle_present(&self, dir: &Path) -> Result<()> {
+        for f in self.files_in_output_bundle().iter() {
+            let () = dir
+                .join(f)
+                .exists()
+                .then_some(())
+                .with_context(|| format!("file {} should exist", f.display()))?;
+        }
+
+        Ok(())
+    }
+
+    pub fn verify_output_bundle_missing(&self, dir: &Path) -> Result<()> {
+        for f in self.files_in_output_bundle().iter() {
+            let () = dir
+                .join(f)
+                .exists()
+                .not()
+                .then_some(())
+                .with_context(|| format!("file {} should not exist", f.display()))?;
+        }
+
+        Ok(())
+    }
+
+    pub fn verify_output_bundle(&self, dir: &Path) -> Result<()> {
+        if let Some(_) = self.frontmatter {
+            self.verify_output_bundle_present(dir)
+        } else {
+            self.verify_output_bundle_missing(dir)
+        }
+    }
+}
+
 impl<F> Arbitrary for Page<F>
 where
     F: Arbitrary + 'static,
@@ -247,6 +310,12 @@ impl Arbitrary for Slug {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         Self::valid().boxed()
+    }
+}
+
+impl AsRef<str> for Slug {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 
@@ -474,6 +543,72 @@ impl Section {
     pub fn insert_leaf(&mut self, slug: Slug, leaf: LeafPage) -> Option<LeafPage> {
         self.pages.insert(slug, leaf)
     }
+
+    fn verify_output_bundle_present(&self, dir: &Path) -> Result<()> {
+        println!("Recursing into {}", dir.display());
+        // When enforcing presence, the only thing to enforce is the existence of the index page.
+        // For leaf pages and sub sections, it's up to the component, whether they should exist.
+
+        // TODO: fix case when index page is present but lacks frontmatter file
+        let () = self
+            .index
+            .as_ref()
+            .context("index page should be present")?
+            .verify_output_bundle_present(&dir)
+            .context("while checking index page")?;
+
+        for (s, p) in self.pages.iter() {
+            // Let the page decide, whether it should exist
+            let () = p
+                .verify_output_bundle(&dir.join(s.as_ref()))
+                .with_context(|| format!("while checking leaf page at slug '{}'", s.as_ref()))?;
+        }
+
+        for (s, sec) in self.sub_sections.iter() {
+            // Let the subsection decide, whether it should exist
+            let () = sec
+                .verify_output_bundle(&dir.join(s.as_ref()))
+                .with_context(|| format!("while checking sub-section at slug '{}'", s.as_ref()))?;
+        }
+
+        Ok(())
+    }
+
+    pub fn verify_output_bundle_missing(&self, dir: &Path) -> Result<()> {
+        if let Some(index) = &self.index {
+            let () = index
+                .verify_output_bundle_missing(dir)
+                .context("while checking index page")?;
+        }
+
+        for s in self.pages.keys() {
+            let () = dir
+                .join(s.as_ref())
+                .exists()
+                .not()
+                .then_some(())
+                .with_context(|| format!("while checking leaf page at slug '{}'", s.as_ref()))?;
+        }
+
+        for s in self.sub_sections.keys() {
+            let () = dir
+                .join(s.as_ref())
+                .exists()
+                .not()
+                .then_some(())
+                .with_context(|| format!("while checking sub-section at slug '{}'", s.as_ref()))?;
+        }
+
+        Ok(())
+    }
+
+    pub fn verify_output_bundle(&self, dir: &Path) -> Result<()> {
+        if let Some(_) = self.index {
+            self.verify_output_bundle_present(dir)
+        } else {
+            self.verify_output_bundle_missing(dir)
+        }
+    }
 }
 
 impl Arbitrary for Section {
@@ -628,6 +763,14 @@ impl Project {
             let config_file = path.join("loveletters.toml");
             config.write_toml(&config_file);
         }
+    }
+
+    pub fn verify_output_bundle_present(&self, path: &Path) -> Result<()> {
+        self.content
+            .as_ref()
+            .context("toplevel section should be present")?
+            .verify_output_bundle_present(path)
+            .context("while checking loveletters project")
     }
 
     // TODO: use this tuple of general_helper, general and missing_something for other types as well

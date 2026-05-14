@@ -27,6 +27,8 @@ proptest = "1.10.0"
 serde = "1.0.228"
 tar = "0.4.44"
 tempfile = "3.24.0"
+# TODO dev-dependency!
+test-strategy = "0.4.5"
 thiserror = "2.0.17"
 time = "0.3.44"
 tokio = "1.48.0"

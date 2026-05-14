@@ -14,10 +14,12 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+anyhow.workspace = true
 loveletters_lib.workspace = true
 proptest.workspace = true
 serde = { workspace = true, features = ["derive"] }
 tempfile.workspace = true
+test-strategy.workspace = true
 time = { workspace = true, features = ["serde", "parsing"] }
 toml.workspace = true
 url.workspace = true
