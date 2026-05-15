@@ -67,11 +67,12 @@ impl IntoValue for &LeafFrontmatter {
 #[cfg(test)]
 mod tests {
     use lattice::IntoDefect;
-    use loveletters_mock::page::leaf::Frontmatter as MockLeafFrontmatter;
+    use loveletters_mock::page::index::Frontmatter as MockLeafFrontmatter;
+    use loveletters_mock::page::leaf::Frontmatter as MockIndexFrontmatter;
     use proptest::prelude::Strategy;
     use test_strategy::proptest;
 
-    use crate::content::LeafFrontmatter;
+    use crate::content::{IndexFrontmatter, LeafFrontmatter};
 
     #[derive(Debug)]
     struct Unexpected<T> {
@@ -95,6 +96,9 @@ mod tests {
             Self { inner: value }
         }
     }
+
+    // TODO do these unit tests serve any purpose? These are more testing serde/toml than
+    // anything else...
 
     #[proptest]
     fn leaf_frontmatter_deserializes_valid_str(
@@ -149,6 +153,66 @@ mod tests {
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
+
+        match res {
+            Err(_) => Ok(()),
+            ok => Err(Unexpected::from(ok)),
+        }?;
+    }
+
+    #[proptest]
+    fn index_frontmatter_deserializes_valid_str(
+        #[strategy(
+            MockIndexFrontmatter::builder().build()
+        )]
+        mock: MockIndexFrontmatter,
+    ) {
+        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
+        let _ = res.map_err(Unexpected::from)?;
+    }
+
+    #[proptest]
+    fn index_frontmatter_rejects_missing_publication(
+        #[strategy(
+            MockIndexFrontmatter::builder().without_publication().build()
+        )]
+        mock: MockIndexFrontmatter,
+    ) {
+        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
+
+        match res {
+            Err(_) => Ok(()),
+            ok => Err(Unexpected::from(ok)),
+        }?;
+    }
+
+    #[proptest]
+    fn index_frontmatter_rejects_missing_title(
+        #[strategy(
+            MockIndexFrontmatter::builder().without_title().build()
+        )]
+        mock: MockIndexFrontmatter,
+    ) {
+        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
+
+        match res {
+            Err(_) => Ok(()),
+            ok => Err(Unexpected::from(ok)),
+        }?;
+    }
+
+    #[proptest]
+    fn index_frontmatter_rejects_invalid_publication(
+        #[strategy(
+            MockIndexFrontmatter::builder().with_publication("[a-z]{4}".into_defect().boxed()).build()
+        )]
+        mock: MockIndexFrontmatter,
+    ) {
+        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
 
         match res {
             Err(_) => Ok(()),
