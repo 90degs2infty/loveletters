@@ -34,16 +34,13 @@ pub enum Site<O> {
 
 impl<O> Site<O> {
     pub fn is_vacant(&self) -> bool {
-        match self {
-            Self::Vacant => true,
-            _ => false,
-        }
+        matches!(self, Self::Vacant)
     }
 
     pub fn get(&self) -> Option<&O> {
         match self {
-            Self::Occupied(o) => Some(&o),
-            _ => None,
+            Self::Occupied(o) => Some(o),
+            Self::Vacant => None,
         }
     }
 
@@ -106,7 +103,7 @@ pub type So<C, D> = Site<Occupation<C, D>>;
 
 impl<C, D> So<C, D> {
     pub fn get_correct(&self) -> Option<&C> {
-        self.get().map(Occupation::get_correct).flatten()
+        self.get().and_then(Occupation::get_correct)
     }
 }
 

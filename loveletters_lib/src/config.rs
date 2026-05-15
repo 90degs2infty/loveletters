@@ -1,6 +1,6 @@
 use crate::error::{EntityKind, Error, Result};
 use serde::{Deserialize, Serialize};
-use std::{fs, io::ErrorKind, path::Path};
+use std::{fs, path::Path};
 use typst::foundations::{Dict, IntoValue, Value};
 use url::{Position, Url};
 

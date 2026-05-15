@@ -1,11 +1,9 @@
 use std::{fs, marker::PhantomData, path::PathBuf};
 
-use anyhow::Context;
 use serde::Deserialize;
 use typst::foundations::{Dict, IntoValue, Value};
 
 use crate::{
-    content::LeafFrontmatter,
     discovery::DiscoveredPage,
     error::{Error, Result},
     page::Mode,

@@ -60,6 +60,7 @@ fn fmt_source_chain(e: &impl error::Error, f: &mut fmt::Formatter<'_>) -> fmt::R
 /// Failure conditions encountered during project compilation
 #[derive(Error)]
 #[non_exhaustive]
+#[must_use]
 pub enum Error {
     /// File or directory not found
     // ISSUE(7): is there a way to avoid the allocation when building this error message?
@@ -100,7 +101,7 @@ pub enum Error {
     MalformedFrontmatter {
         /// The underlying error
         #[source]
-        raw: Box<dyn std::error::Error>,
+        raw: Box<dyn error::Error>,
     },
     /// Malformed project structure
     #[error("detected malformed project structure at '{path}'")]

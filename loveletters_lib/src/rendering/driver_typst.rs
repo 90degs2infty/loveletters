@@ -11,7 +11,7 @@ use std::{
     env::{temp_dir, var_os},
     ffi::OsString,
     fs::{read as read_file, read_to_string, remove_dir_all},
-    io::{ErrorKind, Read},
+    io::Read,
     path::PathBuf,
     str::from_utf8,
     sync::{Arc, Mutex},

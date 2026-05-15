@@ -1,7 +1,6 @@
-use super::site::Site;
 use proptest::prelude::{Arbitrary, BoxedStrategy, Strategy};
 use serde::Serialize;
-use std::fmt::{Debug, Display};
+use std::fmt::{self, Debug, Display};
 
 /// An `Occupation` represents some value that may or may not be valid.
 ///
@@ -28,15 +27,15 @@ pub enum Occupation<C, D> {
 impl<C, D> Occupation<C, D> {
     pub fn get_correct(&self) -> Option<&C> {
         match self {
-            Self::Correct(c) => Some(&c),
-            _ => None,
+            Self::Correct(c) => Some(c),
+            Self::Defect(_) => None,
         }
     }
 
     pub fn get_defect(&self) -> Option<&D> {
         match self {
-            Self::Defect(d) => Some(&d),
-            _ => None,
+            Self::Correct(_) => None,
+            Self::Defect(d) => Some(d),
         }
     }
 }
@@ -46,7 +45,7 @@ where
     C: Display,
     D: Display,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Correct(c) => c.fmt(f),
             Self::Defect(d) => d.fmt(f),

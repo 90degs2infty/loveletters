@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    fs::exists,
     io::ErrorKind,
     marker::PhantomData,
     path::{Path, PathBuf},
