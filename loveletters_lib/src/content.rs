@@ -67,15 +67,33 @@ impl IntoValue for &LeafFrontmatter {
 #[cfg(test)]
 mod tests {
     use lattice::IntoDefect;
-    use loveletters_mock::leaf::Frontmatter as MockLeafFrontmatter;
+    use loveletters_mock::page::leaf::Frontmatter as MockLeafFrontmatter;
     use proptest::prelude::Strategy;
     use test_strategy::proptest;
 
     use crate::content::LeafFrontmatter;
 
     #[derive(Debug)]
-    struct UnexpectedResult<T, E> {
-        inner: Result<T, E>,
+    struct Unexpected<T> {
+        inner: T,
+    }
+
+    impl<T> std::fmt::Display for Unexpected<T>
+    where
+        T: std::fmt::Debug,
+    {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            // TODO is there a nicer way of displaying the value as falling back to the inner value's Display impl?
+            write!(f, "Unexpected({:?})", self.inner)
+        }
+    }
+
+    impl<T> std::error::Error for Unexpected<T> where T: std::fmt::Debug {}
+
+    impl<T> From<T> for Unexpected<T> {
+        fn from(value: T) -> Self {
+            Self { inner: value }
+        }
     }
 
     #[proptest]
@@ -86,7 +104,8 @@ mod tests {
         mock: MockLeafFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
-        let _: LeafFrontmatter = toml::from_str(&toml)?;
+        let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
+        let _ = res.map_err(Unexpected::from)?;
     }
 
     #[proptest]
@@ -97,8 +116,12 @@ mod tests {
         mock: MockLeafFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
-        let _: LeafFrontmatter = toml::from_str(&toml)?;
-        // TODO assert the right thing
+        let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
+
+        match res {
+            Err(_) => Ok(()),
+            ok => Err(Unexpected::from(ok)),
+        }?;
     }
 
     #[proptest]
@@ -109,8 +132,12 @@ mod tests {
         mock: MockLeafFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
-        let _: LeafFrontmatter = toml::from_str(&toml)?;
-        // TODO assert the right thing
+        let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
+
+        match res {
+            Err(_) => Ok(()),
+            ok => Err(Unexpected::from(ok)),
+        }?;
     }
 
     #[proptest]
@@ -121,7 +148,11 @@ mod tests {
         mock: MockLeafFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
-        let _: LeafFrontmatter = toml::from_str(&toml)?;
-        // TODO assert the right thing
+        let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
+
+        match res {
+            Err(_) => Ok(()),
+            ok => Err(Unexpected::from(ok)),
+        }?;
     }
 }
