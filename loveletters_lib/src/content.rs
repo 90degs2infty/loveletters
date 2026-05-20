@@ -67,8 +67,8 @@ impl IntoValue for &LeafFrontmatter {
 #[cfg(test)]
 mod tests {
     use lattice::IntoDefect;
-    use loveletters_mock::page::index::Frontmatter as MockLeafFrontmatter;
-    use loveletters_mock::page::leaf::Frontmatter as MockIndexFrontmatter;
+    use loveletters_mock::page::index::Frontmatter as MockIndexFrontmatter;
+    use loveletters_mock::page::leaf::Frontmatter as MockLeafFrontmatter;
     use proptest::prelude::Strategy;
     use test_strategy::proptest;
 
@@ -107,7 +107,7 @@ mod tests {
         )]
         mock: MockLeafFrontmatter,
     ) {
-        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
         let _ = res.map_err(Unexpected::from)?;
     }
@@ -119,7 +119,7 @@ mod tests {
         )]
         mock: MockLeafFrontmatter,
     ) {
-        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
 
         match res {
@@ -135,7 +135,7 @@ mod tests {
         )]
         mock: MockLeafFrontmatter,
     ) {
-        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
 
         match res {
@@ -151,7 +151,7 @@ mod tests {
         )]
         mock: MockLeafFrontmatter,
     ) {
-        let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
+        let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
 
         match res {
