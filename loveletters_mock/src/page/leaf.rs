@@ -7,6 +7,8 @@ use time::{Date, UtcDateTime};
 use tokio::{fs::File, io::AsyncWriteExt};
 use toml;
 
+use crate::typst::file::{StrategyBuilder as TypstStrategyBuilder, TypstSourceFile};
+
 // TODO replace strings with COW semantics to make cloneing cheap
 
 #[derive(Debug, Clone, Serialize)]
@@ -130,5 +132,95 @@ impl FrontmatterStrategyBuilder {
                 filestem,
                 fileext,
             })
+    }
+}
+
+#[derive(Debug)]
+pub struct Page {
+    frontmatter: Option<Frontmatter>,
+    content: Option<TypstSourceFile>,
+}
+
+impl Page {
+    pub fn builder() -> PageStrategyBuilder {
+        PageStrategyBuilder::valid()
+    }
+
+    pub async fn write_to_dir(&self, dir: &Path) -> Result<()> {
+        if let Some(frontmatter) = self.frontmatter.as_ref() {
+            let () = frontmatter.try_write_to_dir(dir).await?;
+        }
+
+        if let Some(content) = self.content.as_ref() {
+            let () = content.try_write_to_dir(dir).await?;
+        }
+
+        Ok(())
+    }
+}
+
+pub struct PageStrategyBuilder {
+    frontmatter: Option<FrontmatterStrategyBuilder>,
+    content: Option<TypstStrategyBuilder>,
+}
+
+impl PageStrategyBuilder {
+    pub fn valid() -> Self {
+        Self {
+            frontmatter: Some(FrontmatterStrategyBuilder::valid()),
+            content: Some(TypstStrategyBuilder::empty()),
+        }
+    }
+
+    pub fn frontmatter(&self) -> Option<&FrontmatterStrategyBuilder> {
+        self.frontmatter.as_ref()
+    }
+
+    pub fn frontmatter_mut(&mut self) -> Option<&mut FrontmatterStrategyBuilder> {
+        self.frontmatter.as_mut()
+    }
+
+    pub fn content(&self) -> Option<&TypstStrategyBuilder> {
+        self.content.as_ref()
+    }
+
+    pub fn content_mut(&mut self) -> Option<&mut TypstStrategyBuilder> {
+        self.content.as_mut()
+    }
+
+    pub fn build(&self) -> impl Strategy<Value = Page> {
+        (
+            self.frontmatter
+                .as_ref()
+                .map(FrontmatterStrategyBuilder::build)
+                .transpose(),
+            self.content
+                .as_ref()
+                .map(TypstStrategyBuilder::build)
+                .transpose(),
+        )
+            .prop_map(|(frontmatter, content)| Page {
+                frontmatter,
+                content,
+            })
+    }
+}
+
+pub trait Transpose {
+    type Output;
+    fn transpose(self) -> Self::Output;
+}
+
+impl<S, T> Transpose for Option<S>
+where
+    S: Strategy<Value = T> + 'static,
+    T: Clone + fmt::Debug + 'static,
+{
+    type Output = BoxedStrategy<Option<T>>;
+    fn transpose(self) -> Self::Output {
+        match self {
+            None => Just(None).boxed(),
+            Some(s) => s.prop_map(Some).boxed(),
+        }
     }
 }
