@@ -1393,10 +1393,13 @@ dependencies = [
 name = "loveletters_mock"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "lattice",
  "proptest",
  "serde",
  "time",
+ "tokio",
+ "toml 0.9.8",
 ]
 
 [[package]]
