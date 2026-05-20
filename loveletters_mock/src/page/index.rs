@@ -4,6 +4,7 @@ use serde::Serialize;
 use time::{Date, UtcDateTime};
 
 // TODO replace strings with COW semantics to make cloneing cheap
+// TODO drop, instead use leaf-page and merge concepts of leaf and index pages
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Title(String);
