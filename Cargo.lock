@@ -1376,9 +1376,11 @@ dependencies = [
  "proptest",
  "serde",
  "tar",
+ "tempfile",
  "test-strategy",
  "thiserror",
  "time",
+ "tokio",
  "toml 0.9.8",
  "typst",
  "typst-html",
@@ -1396,6 +1398,7 @@ dependencies = [
  "anyhow",
  "lattice",
  "proptest",
+ "proptest_ext",
  "serde",
  "time",
  "tokio",
@@ -1824,6 +1827,13 @@ dependencies = [
  "rusty-fork",
  "tempfile",
  "unarray",
+]
+
+[[package]]
+name = "proptest_ext"
+version = "0.1.0"
+dependencies = [
+ "proptest",
 ]
 
 [[package]]

@@ -1,16 +1,14 @@
 use anyhow::Result;
 use proptest::prelude::*;
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
 
 use crate::typst::snippet::Snippet;
 
-// TODO make cloneing cheaper!
-
 #[derive(Debug, Clone)]
 pub struct TypstSourceFile {
-    content: Vec<Snippet>,
+    content: Arc<Vec<Snippet>>,
 
     filestem: String,
     fileext: String,
@@ -20,7 +18,7 @@ impl TypstSourceFile {
     pub async fn try_write_to_dir(&self, dir: &Path) -> Result<()> {
         let path = dir.join(&self.filestem).with_extension(&self.fileext);
         let mut file = BufWriter::new(File::create(&path).await?);
-        for snippet in &self.content {
+        for snippet in self.content.iter() {
             let _ = file.write(snippet.as_string().as_bytes()).await?;
         }
         file.flush().await?;
@@ -29,7 +27,7 @@ impl TypstSourceFile {
 }
 
 pub struct StrategyBuilder {
-    content: Vec<BoxedStrategy<Snippet>>,
+    content: Arc<Vec<BoxedStrategy<Snippet>>>,
 
     filestem: BoxedStrategy<String>,
     fileext: BoxedStrategy<String>,
@@ -38,19 +36,19 @@ pub struct StrategyBuilder {
 impl StrategyBuilder {
     pub fn empty() -> Self {
         Self {
-            content: Vec::new(),
+            content: Arc::new(Vec::new()),
             filestem: "page".boxed(),
             fileext: "typ".boxed(),
         }
     }
 
     pub fn push_snippet(&mut self, snippet: impl Strategy<Value = Snippet> + 'static) -> &mut Self {
-        self.content.push(snippet.boxed());
+        Arc::make_mut(&mut self.content).push(snippet.boxed());
         self
     }
 
     pub fn push_snippets(&mut self, snippets: &[BoxedStrategy<Snippet>]) -> &mut Self {
-        self.content.extend_from_slice(snippets);
+        Arc::make_mut(&mut self.content).extend_from_slice(snippets);
         self
     }
 
@@ -75,7 +73,7 @@ impl StrategyBuilder {
         } = self;
         (content.clone(), filestem.clone(), fileext.clone()).prop_map(
             |(content, filestem, fileext)| TypstSourceFile {
-                content,
+                content: Arc::new(content),
                 filestem,
                 fileext,
             },

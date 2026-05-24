@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["lattice","loveletters_bin", "loveletters_lib", "loveletters_mock", "loveletters_testsuite"]
+members = ["lattice","loveletters_bin", "loveletters_lib", "loveletters_mock", "loveletters_testsuite", "proptest_ext"]
 
 [workspace.package]
 authors = ["90degs2infty <90degs2infty@posteo.org>"]
@@ -26,6 +26,7 @@ loveletters_lib = { path = "./loveletters_lib" }
 loveletters_mock = { path = "./loveletters_mock" }
 # TODO dev-dependency!
 proptest = "1.10.0"
+proptest_ext = { path = "./proptest_ext" }
 serde = "1.0.228"
 tar = "0.4.44"
 tempfile = "3.24.0"

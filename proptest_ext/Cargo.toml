@@ -1,5 +1,5 @@
 [package]
-name = "loveletters_mock"
+name = "proptest_ext"
 authors.workspace = true
 categories.workspace = true
 documentation.workspace = true
@@ -14,14 +14,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow.workspace = true
-lattice.workspace = true
 proptest.workspace = true
-proptest_ext.workspace = true
-serde = { workspace = true, features = ["derive"] }
-time = { workspace = true, features = ["serde", "parsing"] }
-tokio = { workspace = true, features = ["fs", "io-util"] }
-toml.workspace = true
 
 [lints]
 workspace = true

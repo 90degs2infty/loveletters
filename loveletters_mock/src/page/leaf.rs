@@ -1,13 +1,17 @@
 use anyhow::Result;
 use lattice::{IntoCorrect, Site, So};
 use proptest::prelude::*;
+use proptest_ext::transpose::Transpose;
 use serde::Serialize;
-use std::{fmt, path::Path};
+use std::path::Path;
 use time::{Date, UtcDateTime};
 use tokio::{fs::File, io::AsyncWriteExt};
 use toml;
 
-use crate::typst::file::{StrategyBuilder as TypstStrategyBuilder, TypstSourceFile};
+use crate::{
+    section::StrategyBuilder as SectionStrategyBuilder,
+    typst::file::{StrategyBuilder as TypstStrategyBuilder, TypstSourceFile},
+};
 
 // TODO replace strings with COW semantics to make cloneing cheap
 
@@ -135,7 +139,7 @@ impl FrontmatterStrategyBuilder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Page {
     frontmatter: Option<Frontmatter>,
     content: Option<TypstSourceFile>,
@@ -146,7 +150,7 @@ impl Page {
         PageStrategyBuilder::valid()
     }
 
-    pub async fn write_to_dir(&self, dir: &Path) -> Result<()> {
+    pub async fn try_write_to_dir(&self, dir: &Path) -> Result<()> {
         if let Some(frontmatter) = self.frontmatter.as_ref() {
             let () = frontmatter.try_write_to_dir(dir).await?;
         }
@@ -172,6 +176,10 @@ impl PageStrategyBuilder {
         }
     }
 
+    pub fn wrap_in_section(self) -> SectionStrategyBuilder {
+        SectionStrategyBuilder::wrap(self)
+    }
+
     pub fn frontmatter(&self) -> Option<&FrontmatterStrategyBuilder> {
         self.frontmatter.as_ref()
     }
@@ -188,7 +196,7 @@ impl PageStrategyBuilder {
         self.content.as_mut()
     }
 
-    pub fn build(&self) -> impl Strategy<Value = Page> {
+    pub fn build(&self) -> impl Strategy<Value = Page> + use<> {
         (
             self.frontmatter
                 .as_ref()
@@ -203,24 +211,5 @@ impl PageStrategyBuilder {
                 frontmatter,
                 content,
             })
-    }
-}
-
-pub trait Transpose {
-    type Output;
-    fn transpose(self) -> Self::Output;
-}
-
-impl<S, T> Transpose for Option<S>
-where
-    S: Strategy<Value = T> + 'static,
-    T: Clone + fmt::Debug + 'static,
-{
-    type Output = BoxedStrategy<Option<T>>;
-    fn transpose(self) -> Self::Output {
-        match self {
-            None => Just(None).boxed(),
-            Some(s) => s.prop_map(Some).boxed(),
-        }
     }
 }
