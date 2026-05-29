@@ -26,6 +26,7 @@ impl Title {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct Frontmatter {
+    // TODO serialize using common iso format as opposed to array
     #[serde(skip_serializing_if = "So::is_vacant")]
     publication: So<Date, String>,
     #[serde(skip_serializing_if = "So::is_vacant")]
