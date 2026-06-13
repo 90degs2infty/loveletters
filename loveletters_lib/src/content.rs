@@ -69,33 +69,11 @@ mod tests {
     use lattice::IntoDefect;
     use loveletters_mock::page::index::Frontmatter as MockIndexFrontmatter;
     use loveletters_mock::page::leaf::Frontmatter as MockLeafFrontmatter;
+    use loveletters_test_helpers::unexpected::Unexpected;
     use proptest::prelude::Strategy;
     use test_strategy::proptest;
 
     use crate::content::{IndexFrontmatter, LeafFrontmatter};
-
-    #[derive(Debug)]
-    struct Unexpected<T> {
-        inner: T,
-    }
-
-    impl<T> std::fmt::Display for Unexpected<T>
-    where
-        T: std::fmt::Debug,
-    {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            // TODO is there a nicer way of displaying the value as falling back to the inner value's Display impl?
-            write!(f, "Unexpected({:?})", self.inner)
-        }
-    }
-
-    impl<T> std::error::Error for Unexpected<T> where T: std::fmt::Debug {}
-
-    impl<T> From<T> for Unexpected<T> {
-        fn from(value: T) -> Self {
-            Self { inner: value }
-        }
-    }
 
     // TODO do these unit tests serve any purpose? These are more testing serde/toml than
     // anything else...
