@@ -126,15 +126,18 @@ pub enum Error {
     /// Decorator indicating the erroneous path
     #[error("while working on {path}")]
     AtPath {
+        /// The file who's processing eventually lead to the wrapped error.
         path: PathBuf,
+        /// The source error.
         #[source]
         raw: Box<Self>,
     },
 }
 
-// TODO: drop all paths in above variants and use AtPath instead
+// TODO: switch to an error layout more similar to what std::io::Error does.
 
 impl Error {
+    /// Turn the specified [`IoError`] into an [`Error`].
     // TODO: Seal calls to this function?
     pub fn from_io_error(e: IoError, path: Option<PathBuf>, entity: EntityKind) -> Self {
         match e.kind() {
@@ -146,6 +149,9 @@ impl Error {
         }
     }
 
+    /// Attach additional information on where the error occurred in terms of file system location.
+    ///
+    /// Calling [`Error::at`] with `path` carries the semantics of `self` having resulted from the processing of `path`.
     pub fn at(self, path: PathBuf) -> Self {
         Self::AtPath {
             path,
