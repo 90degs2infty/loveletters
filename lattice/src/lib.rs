@@ -1,3 +1,5 @@
+//! Generation of present or absent, valid or invalid key value pairs.
+
 mod occupation;
 mod site;
 

@@ -18,13 +18,17 @@ use std::fmt::{self, Debug, Display};
 /// To encode presence and absence, see [`Site`] instead.
 #[derive(Debug, Serialize, Clone)]
 pub enum Occupation<C, D> {
+    /// A correct (valid) value.
     #[serde(untagged)]
     Correct(C),
+
+    /// A defect (invalid) value.
     #[serde(untagged)]
     Defect(D),
 }
 
 impl<C, D> Occupation<C, D> {
+    /// Get the contained correct value, if any.
     pub fn get_correct(&self) -> Option<&C> {
         match self {
             Self::Correct(c) => Some(c),
@@ -32,6 +36,7 @@ impl<C, D> Occupation<C, D> {
         }
     }
 
+    /// Get the contained defect value, if any.
     pub fn get_defect(&self) -> Option<&D> {
         match self {
             Self::Correct(_) => None,
@@ -39,6 +44,9 @@ impl<C, D> Occupation<C, D> {
         }
     }
 
+    /// Apply `f` to the contained correct value.
+    ///
+    /// Defect values are left untouched.
     pub fn map_correct<T, F>(self, f: F) -> Occupation<T, D>
     where
         F: Fn(C) -> T,
@@ -49,6 +57,9 @@ impl<C, D> Occupation<C, D> {
         }
     }
 
+    /// Apply `f` to the contained defect value.
+    ///
+    /// Correct values are left untouched.
     pub fn map_defect<T, F>(self, f: F) -> Occupation<C, T>
     where
         F: Fn(D) -> T,
