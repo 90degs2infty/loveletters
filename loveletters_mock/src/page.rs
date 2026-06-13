@@ -243,22 +243,22 @@ impl PageStrategyBuilder {
         SectionStrategyBuilder::wrap(self)
     }
 
-    /// Get access to this [`Page`]'s frontmatter configuration, if any.
+    /// Get access to the generated [`Page`]'s frontmatter configuration, if any.
     pub fn frontmatter(&self) -> Option<&FrontmatterStrategyBuilder> {
         self.frontmatter.as_ref()
     }
 
-    /// Get mutable access to this [`Page`]'s frontmatter configuration, if any.
+    /// Get mutable access to the generated [`Page`]'s frontmatter configuration, if any.
     pub fn frontmatter_mut(&mut self) -> Option<&mut FrontmatterStrategyBuilder> {
         self.frontmatter.as_mut()
     }
 
-    /// Get access to this [`Page`]'s typst content, if any.
+    /// Get access to the generated [`Page`]'s typst content, if any.
     pub fn content(&self) -> Option<&TypstStrategyBuilder> {
         self.content.as_ref()
     }
 
-    /// Get mutable access to this [`Page`]'s typst content, if any.
+    /// Get mutable access to the generated [`Page`]'s typst content, if any.
     pub fn content_mut(&mut self) -> Option<&mut TypstStrategyBuilder> {
         self.content.as_mut()
     }
