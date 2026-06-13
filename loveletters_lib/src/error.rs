@@ -48,10 +48,10 @@ fn build_desc_fileio(path: Option<&Path>) -> String {
 }
 
 fn fmt_source_chain(e: &impl error::Error, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    writeln!(f, "{e}\n")?;
+    write!(f, "{e}")?;
     let mut current = e.source();
     while let Some(cause) = current {
-        writeln!(f, "Caused by:\n\t{cause:?}")?;
+        writeln!(f, "\nCaused by:\n\t{cause:?}")?;
         current = cause.source();
     }
     Ok(())

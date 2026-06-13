@@ -44,13 +44,13 @@ async fn project_requires_config(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    match res {
+    into_unexpected!(
+        res,
         Err(Error::NotFound {
             missing: EntityKind::ProjectConfig,
             path: _,
-        }) => Ok(()),
-        r => Err(Unexpected::from(r)),
-    }?;
+        })
+    )?;
 }
 
 #[proptest(async = "tokio")]
@@ -66,13 +66,13 @@ async fn project_config_requires_loveletters_filestem(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    match res {
+    into_unexpected!(
+        res,
         Err(Error::NotFound {
             missing: EntityKind::ProjectConfig,
             path: _,
-        }) => Ok(()),
-        r => Err(Unexpected::from(r)),
-    }?;
+        })
+    )?;
 }
 
 #[proptest(async = "tokio")]
@@ -88,13 +88,13 @@ async fn project_config_requires_toml_fileext(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    match res {
+    into_unexpected!(
+        res,
         Err(Error::NotFound {
             missing: EntityKind::ProjectConfig,
             path: _,
-        }) => Ok(()),
-        r => Err(Unexpected::from(r)),
-    }?;
+        })
+    )?;
 }
 
 #[proptest(async = "tokio")]
@@ -110,13 +110,13 @@ async fn project_config_requires_title(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    match res {
+    into_unexpected!(
+        res,
         Err(Error::MalformedProjectConfig {
             location: _,
             raw: _,
-        }) => Ok(()),
-        r => Err(Unexpected::from(r)),
-    }?;
+        })
+    )?;
 }
 
 #[proptest(async = "tokio")]
@@ -132,13 +132,13 @@ async fn project_config_requires_author(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    match res {
+    into_unexpected!(
+        res,
         Err(Error::MalformedProjectConfig {
             location: _,
             raw: _,
-        }) => Ok(()),
-        r => Err(Unexpected::from(r)),
-    }?;
+        })
+    )?;
 }
 
 #[proptest(async = "tokio")]
@@ -154,13 +154,13 @@ async fn project_config_requires_root(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    match res {
+    into_unexpected!(
+        res,
         Err(Error::MalformedProjectConfig {
             location: _,
             raw: _,
-        }) => Ok(()),
-        r => Err(Unexpected::from(r)),
-    }?;
+        })
+    )?;
 }
 
 #[proptest(async = "tokio")]
@@ -176,13 +176,13 @@ async fn project_config_requires_valid_root(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    match res {
+    into_unexpected!(
+        res,
         Err(Error::MalformedProjectConfig {
             location: _,
             raw: _,
-        }) => Ok(()),
-        r => Err(Unexpected::from(r)),
-    }?;
+        })
+    )?;
 }
 
 #[proptest(async = "tokio")]
@@ -198,11 +198,11 @@ async fn project_config_denies_excess_project_config_key(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    match res {
+    into_unexpected!(
+        res,
         Err(Error::MalformedProjectConfig {
             location: _,
             raw: _,
-        }) => Ok(()),
-        r => Err(Unexpected::from(r)),
-    }?;
+        })
+    )?;
 }
