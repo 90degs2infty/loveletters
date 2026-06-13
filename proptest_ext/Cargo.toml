@@ -15,6 +15,7 @@ version.workspace = true
 
 [dependencies]
 proptest.workspace = true
+anyhow.workspace = true
 
 [lints]
 workspace = true
