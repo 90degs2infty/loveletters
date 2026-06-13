@@ -1,5 +1,5 @@
 [package]
-name = "loveletters_testsuite"
+name = "loveletters_test_helpers"
 authors.workspace = true
 categories.workspace = true
 documentation.workspace = true

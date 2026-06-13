@@ -33,7 +33,9 @@ zune-inflate.workspace = true
 [dev-dependencies]
 lattice.workspace = true
 loveletters_mock.workspace = true
+loveletters_test_helpers.workspace = true
 proptest.workspace = true
+proptest_ext.workspace = true
 tempfile.workspace = true
 test-strategy.workspace = true
 tokio = { workspace = true, features = ["full"] }
