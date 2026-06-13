@@ -69,7 +69,7 @@ mod tests {
     use lattice::IntoDefect;
     use loveletters_mock::page::index::Frontmatter as MockIndexFrontmatter;
     use loveletters_mock::page::leaf::Frontmatter as MockLeafFrontmatter;
-    use loveletters_test_helpers::{into_unexpected, unexpected::Unexpected};
+    use loveletters_test_helpers::{mismatch::Mismatch, try_match};
     use proptest::prelude::Strategy;
     use test_strategy::proptest;
 
@@ -87,7 +87,7 @@ mod tests {
     ) {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
-        into_unexpected!(res, Ok(_))?;
+        try_match!(res, Ok(_))?;
     }
 
     #[proptest]
@@ -100,7 +100,7 @@ mod tests {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
 
-        into_unexpected!(res, Err(_))?;
+        try_match!(res, Err(_))?;
     }
 
     #[proptest]
@@ -113,7 +113,7 @@ mod tests {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
 
-        into_unexpected!(res, Err(_))?;
+        try_match!(res, Err(_))?;
     }
 
     #[proptest]
@@ -126,7 +126,7 @@ mod tests {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
 
-        into_unexpected!(res, Err(_))?;
+        try_match!(res, Err(_))?;
     }
 
     #[proptest]
@@ -138,7 +138,7 @@ mod tests {
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
         let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
-        into_unexpected!(res, Ok(_))?;
+        try_match!(res, Ok(_))?;
     }
 
     #[proptest]
@@ -151,7 +151,7 @@ mod tests {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
         let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
 
-        into_unexpected!(res, Err(_))?;
+        try_match!(res, Err(_))?;
     }
 
     #[proptest]
@@ -164,7 +164,7 @@ mod tests {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
         let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
 
-        into_unexpected!(res, Err(_))?;
+        try_match!(res, Err(_))?;
     }
 
     #[proptest]
@@ -177,6 +177,6 @@ mod tests {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
         let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
 
-        into_unexpected!(res, Err(_))?;
+        try_match!(res, Err(_))?;
     }
 }

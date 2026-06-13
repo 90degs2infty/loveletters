@@ -1,12 +1,9 @@
 //! Integration test targeting overall content structure.
 
-use lattice::IntoDefect;
 use loveletters_lib::error::{EntityKind, Error};
 use loveletters_mock::project::{Project, ProjectStrategyBuilder};
-use loveletters_test_helpers::{into_unexpected, try_render_mock, unexpected::Unexpected};
-use proptest::prelude::*;
+use loveletters_test_helpers::{mismatch::Mismatch, try_match, try_render_mock};
 use proptest_ext::conversion::IntoProptest;
-use std::result::Result;
 use test_strategy::proptest;
 #[proptest(async = "tokio")]
 async fn project_requires_content(
@@ -19,7 +16,7 @@ async fn project_requires_content(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    into_unexpected!(
+    try_match!(
         res,
         Err(Error::NotFound {
             missing: EntityKind::ContentDirectory,
@@ -40,7 +37,7 @@ async fn project_requires_nonempty_content_dir(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    into_unexpected!(
+    try_match!(
         res,
         Err(Error::NotFound {
             missing: EntityKind::ToplevelSectionIndex,

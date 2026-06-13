@@ -1,4 +1,4 @@
-pub mod unexpected;
+pub mod mismatch;
 
 use anyhow::{Context, Result};
 use loveletters_lib::{error::Error, render_dir};

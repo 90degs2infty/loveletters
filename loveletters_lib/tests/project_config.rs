@@ -3,7 +3,7 @@
 use lattice::IntoDefect;
 use loveletters_lib::error::{EntityKind, Error};
 use loveletters_mock::project::{Project, ProjectStrategyBuilder};
-use loveletters_test_helpers::{into_unexpected, try_render_mock, unexpected::Unexpected};
+use loveletters_test_helpers::{mismatch::Mismatch, try_match, try_render_mock};
 use proptest::prelude::*;
 use proptest_ext::conversion::IntoProptest;
 use test_strategy::proptest;
@@ -19,7 +19,7 @@ async fn project_requires_config(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    into_unexpected!(
+    try_match!(
         res,
         Err(Error::NotFound {
             missing: EntityKind::ProjectConfig,
@@ -41,7 +41,7 @@ async fn project_config_requires_loveletters_filestem(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    into_unexpected!(
+    try_match!(
         res,
         Err(Error::NotFound {
             missing: EntityKind::ProjectConfig,
@@ -63,7 +63,7 @@ async fn project_config_requires_toml_fileext(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    into_unexpected!(
+    try_match!(
         res,
         Err(Error::NotFound {
             missing: EntityKind::ProjectConfig,
@@ -85,7 +85,7 @@ async fn project_config_requires_title(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    into_unexpected!(
+    try_match!(
         res,
         Err(Error::MalformedProjectConfig {
             location: _,
@@ -107,7 +107,7 @@ async fn project_config_requires_author(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    into_unexpected!(
+    try_match!(
         res,
         Err(Error::MalformedProjectConfig {
             location: _,
@@ -129,7 +129,7 @@ async fn project_config_requires_root(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    into_unexpected!(
+    try_match!(
         res,
         Err(Error::MalformedProjectConfig {
             location: _,
@@ -151,7 +151,7 @@ async fn project_config_requires_valid_root(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    into_unexpected!(
+    try_match!(
         res,
         Err(Error::MalformedProjectConfig {
             location: _,
@@ -173,7 +173,7 @@ async fn project_config_denies_excess_project_config_key(
 ) {
     let res = try_render_mock(&mock).await.into_proptest()?;
 
-    into_unexpected!(
+    try_match!(
         res,
         Err(Error::MalformedProjectConfig {
             location: _,
