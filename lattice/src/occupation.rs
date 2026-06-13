@@ -38,6 +38,26 @@ impl<C, D> Occupation<C, D> {
             Self::Defect(d) => Some(d),
         }
     }
+
+    pub fn map_correct<T, F>(self, f: F) -> Occupation<T, D>
+    where
+        F: Fn(C) -> T,
+    {
+        match self {
+            Self::Correct(c) => Occupation::Correct(f(c)),
+            Self::Defect(d) => Occupation::Defect(d),
+        }
+    }
+
+    pub fn map_defect<T, F>(self, f: F) -> Occupation<C, T>
+    where
+        F: Fn(D) -> T,
+    {
+        match self {
+            Self::Correct(c) => Occupation::Correct(c),
+            Self::Defect(d) => Occupation::Defect(f(d)),
+        }
+    }
 }
 
 impl<C, D> Display for Occupation<C, D>

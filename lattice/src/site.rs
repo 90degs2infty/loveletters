@@ -50,6 +50,16 @@ impl<O> Site<O> {
             Site::Vacant => None,
         }
     }
+
+    pub fn map<F, T>(self, f: F) -> Site<T>
+    where
+        F: FnOnce(O) -> T,
+    {
+        match self {
+            Site::Occupied(o) => Site::Occupied(f(o)),
+            Site::Vacant => Site::Vacant,
+        }
+    }
 }
 
 impl<O: Clone + Debug> Site<O> {
