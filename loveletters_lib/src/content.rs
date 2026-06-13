@@ -67,8 +67,7 @@ impl IntoValue for &LeafFrontmatter {
 #[cfg(test)]
 mod tests {
     use lattice::IntoDefect;
-    use loveletters_mock::page::index::Frontmatter as MockIndexFrontmatter;
-    use loveletters_mock::page::leaf::Frontmatter as MockLeafFrontmatter;
+    use loveletters_mock::page::Frontmatter as MockFrontmatter;
     use loveletters_test_helpers::{mismatch::Mismatch, try_match};
     use proptest::prelude::Strategy;
     use test_strategy::proptest;
@@ -81,9 +80,9 @@ mod tests {
     #[proptest]
     fn leaf_frontmatter_deserializes_valid_str(
         #[strategy(
-            MockLeafFrontmatter::builder().build()
+            MockFrontmatter::builder().build()
         )]
-        mock: MockLeafFrontmatter,
+        mock: MockFrontmatter,
     ) {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
@@ -93,9 +92,9 @@ mod tests {
     #[proptest]
     fn leaf_frontmatter_rejects_missing_publication(
         #[strategy(
-            MockLeafFrontmatter::builder().without_publication().build()
+            MockFrontmatter::builder().without_publication().build()
         )]
-        mock: MockLeafFrontmatter,
+        mock: MockFrontmatter,
     ) {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
@@ -106,9 +105,9 @@ mod tests {
     #[proptest]
     fn leaf_frontmatter_rejects_missing_title(
         #[strategy(
-            MockLeafFrontmatter::builder().without_title().build()
+            MockFrontmatter::builder().without_title().build()
         )]
-        mock: MockLeafFrontmatter,
+        mock: MockFrontmatter,
     ) {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
@@ -119,9 +118,9 @@ mod tests {
     #[proptest]
     fn leaf_frontmatter_rejects_invalid_publication(
         #[strategy(
-            MockLeafFrontmatter::builder().with_publication("[a-z]{4}".into_defect().boxed()).build()
+            MockFrontmatter::builder().with_publication("[a-z]{4}".into_defect().boxed()).build()
         )]
-        mock: MockLeafFrontmatter,
+        mock: MockFrontmatter,
     ) {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
         let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
@@ -132,9 +131,9 @@ mod tests {
     #[proptest]
     fn index_frontmatter_deserializes_valid_str(
         #[strategy(
-            MockIndexFrontmatter::builder().build()
+            MockFrontmatter::builder().build()
         )]
-        mock: MockIndexFrontmatter,
+        mock: MockFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
         let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
@@ -144,9 +143,9 @@ mod tests {
     #[proptest]
     fn index_frontmatter_rejects_missing_publication(
         #[strategy(
-            MockIndexFrontmatter::builder().without_publication().build()
+            MockFrontmatter::builder().without_publication().build()
         )]
-        mock: MockIndexFrontmatter,
+        mock: MockFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
         let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
@@ -157,9 +156,9 @@ mod tests {
     #[proptest]
     fn index_frontmatter_rejects_missing_title(
         #[strategy(
-            MockIndexFrontmatter::builder().without_title().build()
+            MockFrontmatter::builder().without_title().build()
         )]
-        mock: MockIndexFrontmatter,
+        mock: MockFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
         let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
@@ -170,9 +169,9 @@ mod tests {
     #[proptest]
     fn index_frontmatter_rejects_invalid_publication(
         #[strategy(
-            MockIndexFrontmatter::builder().with_publication("[a-z]{4}".into_defect().boxed()).build()
+            MockFrontmatter::builder().with_publication("[a-z]{4}".into_defect().boxed()).build()
         )]
-        mock: MockIndexFrontmatter,
+        mock: MockFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
         let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);

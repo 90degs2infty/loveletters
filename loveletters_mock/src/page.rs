@@ -32,7 +32,7 @@ format_description!(date_common_format, Date, "[year]-[month]-[day]");
 
 /// A date that serializes using the common format `YYYY-MM-DD`.
 #[derive(Debug, Clone, Serialize)]
-struct IsoDate(#[serde(with = "date_common_format")] Date);
+struct IsoDate(#[serde(serialize_with = "date_common_format::serialize")] Date);
 
 impl From<Date> for IsoDate {
     fn from(value: Date) -> Self {

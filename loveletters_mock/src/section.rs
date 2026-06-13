@@ -14,7 +14,7 @@ use std::{
 };
 use tokio::fs;
 
-use crate::page::leaf::{Page, PageStrategyBuilder};
+use crate::page::{Page, PageStrategyBuilder};
 
 // set's size has to match the sum of sizes - this is not checked!
 //
