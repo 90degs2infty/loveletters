@@ -5,6 +5,7 @@ use typst::foundations::{Dict, IntoValue, Value};
 use url::{Position, Url};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     title: String,
     author: String,
