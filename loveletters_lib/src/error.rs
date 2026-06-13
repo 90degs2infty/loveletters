@@ -23,6 +23,8 @@ pub enum EntityKind {
     ProjectConfig,
     /// A page's root content file
     TypstRoot,
+    /// Toplevel section index frontmatter file
+    ToplevelSectionIndex,
     /// Some unspecified entity
     Other,
 }
@@ -35,6 +37,9 @@ impl Display for EntityKind {
             EntityKind::OutputDirectory => write!(f, "output directory"),
             EntityKind::ProjectConfig => write!(f, "project configuration file"),
             EntityKind::TypstRoot => write!(f, "typst root file"),
+            EntityKind::ToplevelSectionIndex => {
+                write!(f, "toplevel section index page frontmatter")
+            }
             EntityKind::Other => write!(f, "file or directory"),
         }
     }
