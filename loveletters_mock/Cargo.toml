@@ -22,6 +22,7 @@ serde = { workspace = true, features = ["derive"] }
 time = { workspace = true, features = ["serde", "parsing"] }
 tokio = { workspace = true, features = ["fs", "io-util"] }
 toml.workspace = true
+url.workspace = true
 
 [lints]
 workspace = true
