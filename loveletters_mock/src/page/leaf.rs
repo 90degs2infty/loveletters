@@ -70,12 +70,21 @@ impl Frontmatter {
     /// Returns an error in case file system access fails.
     pub async fn try_write_to_dir(&self, dir: &Path) -> Result<()> {
         let path = dir.join(&self.filestem).with_extension(&self.fileext);
-        let toml = self.try_to_toml()?;
+        let toml = self
+            .try_to_toml()
+            // TODO which context to specify here?
+            ?;
 
         // No need to buffer, as we do a single write only
-        let mut file = File::create(&path).await?;
-        file.write_all(toml.as_bytes()).await?;
-        file.flush().await?;
+        let mut file = File::create(&path)
+            .await
+            .with_context(|| format!("while creating a file at '{}'", path.display()))?;
+        file.write_all(toml.as_bytes())
+            .await
+            .with_context(|| format!("while writing a content page to '{}'", path.display()))?;
+        file.flush()
+            .await
+            .with_context(|| format!("while flushing the file at '{}'", path.display()))?;
         Ok(())
     }
 

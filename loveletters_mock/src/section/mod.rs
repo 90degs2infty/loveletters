@@ -86,7 +86,10 @@ impl Section {
         if let Some(index) = index.as_ref() {
             let index_dir = dir.join("_index");
             fs::create_dir(&index_dir).await.with_context(|| {
-                format!("while creating a directory at '{}'", index_dir.display())
+                format!(
+                    "while creating a section's index page directory at '{}'",
+                    index_dir.display()
+                )
             })?;
             index.try_write_to_dir(&index_dir).await.with_context(|| {
                 format!("while writing the index page to '{}'", index_dir.display())
@@ -426,4 +429,9 @@ fn prop_wrap_in_section(
         .boxed()
 }
 
-// TODO context for applications of ?
+// TODO context for applications of ?: provide but also streamline this context.
+// I.e. decide for a common structure - in the following, where to put the "while doing foo context":
+// - outside: do_foo().with_context("while doing foo") so that one can
+//   have more targeted context and also only has to specify with_context only once; however does not feel self-contained
+// - inside do_foo: to improve self-containedness but likely leads to
+//   a lot of similar calls .with_context("while doing foo") (i.e. for every occasion of ?).
