@@ -1,3 +1,5 @@
+//! Conversion into `proptest` types.
+
 use anyhow;
 use proptest::prelude::TestCaseError;
 
