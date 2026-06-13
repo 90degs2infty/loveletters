@@ -1,37 +1,12 @@
 //! Integration tests targeting a project's toplevel configuration file.
 
-use anyhow::{Context, Result};
 use lattice::IntoDefect;
 use loveletters_lib::error::{EntityKind, Error};
-use loveletters_lib::render_dir;
 use loveletters_mock::project::{Project, ProjectStrategyBuilder};
-use loveletters_test_helpers::unexpected::Unexpected;
+use loveletters_test_helpers::{into_unexpected, try_render_mock, unexpected::Unexpected};
 use proptest::prelude::*;
 use proptest_ext::conversion::IntoProptest;
-use std::result::Result as StdResult;
-use tempfile::TempDir;
 use test_strategy::proptest;
-
-async fn try_render_mock(mock: &Project) -> Result<StdResult<(), Error>> {
-    let input_dir = TempDir::with_prefix("loveletters-")
-        .with_context(|| "while creating a temporary input directory")?;
-
-    let output_dir = TempDir::with_prefix("loveletters-")
-        .with_context(|| "while creating a temporary output directory")?;
-
-    mock.try_write_to_dir(input_dir.as_ref())
-        .await
-        .with_context(|| {
-            format!(
-                "while writing project to temporary directory {}",
-                input_dir.as_ref().display()
-            )
-        })?;
-
-    let res = render_dir(input_dir.path(), output_dir.path());
-
-    Ok(res)
-}
 
 #[proptest(async = "tokio")]
 async fn project_requires_config(

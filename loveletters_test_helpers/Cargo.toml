@@ -16,6 +16,7 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 loveletters_lib.workspace = true
+loveletters_mock.workspace = true
 proptest.workspace = true
 serde = { workspace = true, features = ["derive"] }
 tempfile.workspace = true
