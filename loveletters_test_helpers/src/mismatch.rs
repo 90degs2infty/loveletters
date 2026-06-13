@@ -24,7 +24,7 @@ where
 impl<T> std::error::Error for Mismatch<T> where T: std::fmt::Debug {}
 
 impl<T> Mismatch<T> {
-    /// Create a new [`Unexpected`] value indicating `value` does not match `pattern`.
+    /// Create a new [`Mismatch`] value indicating `value` does not match `pattern`.
     pub fn new(value: T, pattern: String) -> Self {
         Self {
             inner: value,

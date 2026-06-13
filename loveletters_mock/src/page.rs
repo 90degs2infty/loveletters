@@ -238,7 +238,7 @@ impl PageStrategyBuilder {
         }
     }
 
-    /// Wrap [`Page`]s as configured by this [`PageStrategyBuilder`] in single-paged [`Section`]s.
+    /// Wrap [`Page`]s as configured by this [`PageStrategyBuilder`] in single-paged sections.
     pub fn wrap_in_section(self) -> SectionStrategyBuilder {
         SectionStrategyBuilder::wrap(self)
     }

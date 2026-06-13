@@ -15,7 +15,7 @@ use std::fmt::{self, Debug, Display};
 /// Inspired by the terms in crystallography and condensed matter physics, a valid value is
 /// represented by [`Occupation::Correct`] whereas an invalid value is represented using [`Occupation::Defect`].
 ///
-/// To encode presence and absence, see [`Site`] instead.
+/// To encode presence and absence, see `Site` instead.
 #[derive(Debug, Serialize, Clone)]
 pub enum Occupation<C, D> {
     /// A correct (valid) value.

@@ -137,7 +137,7 @@ pub enum Error {
 // TODO: switch to an error layout more similar to what std::io::Error does.
 
 impl Error {
-    /// Turn the specified [`IoError`] into an [`Error`].
+    /// Turn the specified [`IoError`] into an [`enum@Error`].
     // TODO: Seal calls to this function?
     pub fn from_io_error(e: IoError, path: Option<PathBuf>, entity: EntityKind) -> Self {
         match e.kind() {
