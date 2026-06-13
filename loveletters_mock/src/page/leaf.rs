@@ -4,7 +4,7 @@ use proptest::prelude::*;
 use proptest_ext::transpose::Transpose;
 use serde::Serialize;
 use std::path::Path;
-use time::{Date, UtcDateTime};
+use time::{Date, UtcDateTime, serde::format_description};
 use tokio::{fs::File, io::AsyncWriteExt};
 use toml;
 
@@ -24,11 +24,21 @@ impl Title {
     }
 }
 
+format_description!(date_common_format, Date, "[year]-[month]-[day]");
+
+#[derive(Debug, Clone, Serialize)]
+pub struct IsoDate(#[serde(with = "date_common_format")] Date);
+
+impl From<Date> for IsoDate {
+    fn from(value: Date) -> Self {
+        Self(value)
+    }
+}
+
 #[derive(Debug, Serialize, Clone)]
 pub struct Frontmatter {
-    // TODO serialize using common iso format as opposed to array
     #[serde(skip_serializing_if = "So::is_vacant")]
-    publication: So<Date, String>,
+    publication: So<IsoDate, String>,
     #[serde(skip_serializing_if = "So::is_vacant")]
     title: So<Title, String>,
 
@@ -61,7 +71,7 @@ impl Frontmatter {
 }
 
 pub struct FrontmatterStrategyBuilder {
-    publication: BoxedStrategy<So<Date, String>>,
+    publication: BoxedStrategy<So<IsoDate, String>>,
     title: BoxedStrategy<So<Title, String>>,
 
     filestem: BoxedStrategy<String>,
@@ -76,6 +86,7 @@ impl FrontmatterStrategyBuilder {
                     UtcDateTime::from_unix_timestamp(timestamp)
                         .expect("timestamp in [MIN, MAX] should be valid")
                         .date()
+                        .into()
                 })
                 .into_correct()
                 .boxed(),
@@ -86,7 +97,9 @@ impl FrontmatterStrategyBuilder {
     }
 
     pub fn with_publication(&mut self, publication: BoxedStrategy<So<Date, String>>) -> &mut Self {
-        self.publication = publication;
+        self.publication = publication
+            .prop_map(|d| d.map(|o| o.map_correct(IsoDate::from)))
+            .boxed();
         self
     }
 
