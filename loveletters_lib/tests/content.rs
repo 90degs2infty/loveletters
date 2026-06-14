@@ -2,7 +2,11 @@
 
 use anyhow::Context;
 use loveletters_lib::error::{EntityKind, Error};
-use loveletters_mock::project::{Project, ProjectStrategyBuilder};
+use loveletters_mock::{
+    page::Page,
+    project::{Project, ProjectStrategyBuilder},
+    typst::snippet::StrategyKind as SnippetKind,
+};
 use loveletters_test_helpers::{mismatch::Mismatch, try_match, try_render_mock};
 use proptest_ext::conversion::IntoProptest;
 use test_strategy::proptest;
@@ -26,7 +30,6 @@ async fn project_requires_content(
     )?;
 }
 
-#[ignore = "requires generalization of content discovery"]
 #[proptest(async = "tokio")]
 async fn project_requires_nonempty_content_dir(
     #[strategy(
@@ -44,8 +47,30 @@ async fn project_requires_nonempty_content_dir(
     try_match!(
         res,
         Err(Error::NotFound {
-            missing: EntityKind::ToplevelSectionIndex,
+            missing: EntityKind::Frontmatter,
             path: _,
         })
     )?;
+}
+
+#[proptest(async = "tokio")]
+async fn render_dir_accepts_arbitrary_project_structure(
+    #[strategy(
+        {
+            let mut page = Page::builder();
+            page.content_mut().expect("page should have content").push_snippet(SnippetKind::Lorem.into_strategy());
+
+            let mut project = ProjectStrategyBuilder::empty();
+            project.content_mut().expect("project should have content").draw_pages(page, 0..5).recurse(3, 4, 2);
+            project.build()
+        }
+    )]
+    mock: Project,
+) {
+    let res = try_render_mock(&mock)
+        .await
+        .with_context(|| "while rendering the mock project")
+        .into_proptest()?;
+
+    try_match!(res, Ok(()))?;
 }

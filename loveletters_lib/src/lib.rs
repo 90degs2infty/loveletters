@@ -29,7 +29,7 @@ use std::path::Path;
 /// # Errors
 ///
 /// Returns an [`Error`] when encountering failures states as defined by [`Error`].
-pub fn render_dir(input_dir: impl AsRef<Path>, output_dir: impl AsRef<Path>) -> Result<()> {
+pub async fn render_dir(input_dir: impl AsRef<Path>, output_dir: impl AsRef<Path>) -> Result<()> {
     let input_dir = input_dir.as_ref().canonicalize().map_err(|e| {
         Error::from_io_error(
             e,
@@ -53,7 +53,7 @@ pub fn render_dir(input_dir: impl AsRef<Path>, output_dir: impl AsRef<Path>) -> 
 
     let bundler = Bundler::new(output_dir.clone());
 
-    let discovered_content = Discoverer::try_traverse(&content_dir)?;
+    let discovered_content = Discoverer::try_traverse(&content_dir).await?;
     let frontmatter = try_parse_frontmatter(discovered_content)?;
     let global_ctx = ProjectContext::new(&frontmatter, config);
     let renderer = Renderer::new(global_ctx, input_dir.join("packages"));

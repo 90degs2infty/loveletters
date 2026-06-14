@@ -13,6 +13,8 @@ use crate::{
     slug::Slug,
 };
 use serde::Deserialize;
+use tokio::fs::try_exists;
+use tokio_stream::StreamExt;
 use walkdir::{DirEntry, WalkDir};
 
 static RESERVED_DIRS: [&str; 4] = ["_index", "posts", "static", "assets"];
@@ -20,40 +22,26 @@ static RESERVED_DIRS: [&str; 4] = ["_index", "posts", "static", "assets"];
 pub struct Discoverer {}
 
 impl Discoverer {
-    pub fn try_traverse(
+    pub async fn try_traverse(
         content_dir: &Path,
     ) -> Result<Section<DiscoveredPage<Index>, DiscoveredPage<Leaf>>> {
         // We eagerly check content_dir for existence. Note that this introduces TOCTOU bugs in case
         // content_dir is deleted afterwards (but before collecting e.g. leaf pages). However, it
         // improves error messages in the "ordinary" case, so we accept this risk.
-        if !content_dir.exists() {
+        if !try_exists(&content_dir)
+            .await
+            .map_err(|e: std::io::Error| Error::FileIO {
+                path: Some(content_dir.to_path_buf()),
+                raw: e,
+            })?
+        {
             return Err(Error::NotFound {
                 missing: EntityKind::ContentDirectory,
-                path: Some(content_dir.into()),
+                path: Some(content_dir.to_path_buf()),
             });
         }
 
-        // TODO: implement recursively to collect sub-sections of arbitrary depth of arbitrary name
-        let posts = Discoverer::collect_leaf_pages(&content_dir.join("posts"))?;
-        let toplevels = Discoverer::collect_leaf_pages(content_dir)?;
-
-        let posts = Section::new(
-            "posts".to_owned().into(),
-            DiscoveredPage::index_page(content_dir.join("posts").join("_index")),
-            posts,
-            HashMap::new(),
-        );
-        let mut sub_secs = HashMap::new();
-        let _ = sub_secs.insert("posts".to_owned().into(), posts);
-        let toplevel_section = Section::new(
-            String::new().into(),
-            DiscoveredPage::index_page(content_dir.join("_index")),
-            toplevels,
-            sub_secs,
-        );
-
-        // TODO how to distinguish toplevel index and posts properly? Maybe introduce the notion of sections?
-        Ok(toplevel_section)
+        Self::try_discover_section_recursive(content_dir).await
     }
 
     fn is_frontmatter<M: Mode>(entry: &DirEntry) -> bool {
@@ -114,6 +102,117 @@ impl Discoverer {
                 ))
             })
             .collect::<Result<HashMap<_, _>>>()
+    }
+
+    async fn try_discover_section_recursive(
+        dir: &Path,
+    ) -> Result<Section<DiscoveredPage<Index>, DiscoveredPage<Leaf>>> {
+        let index_page = Self::try_discover_index_page(dir.join("_index")).await?;
+
+        let mut subsections = HashMap::new();
+        let mut pages = HashMap::new();
+
+        let mut subdirs = tokio_stream::iter(
+            WalkDir::new(dir)
+                .min_depth(1)
+                .max_depth(1)
+                .into_iter()
+                .filter_entry(|e| !Self::is_reserved_dir(e)),
+        );
+
+        // TODO process concurrently?
+        while let Some(entry) = subdirs.next().await {
+            let entry = entry.map_err(|e| {
+                if let Some(p) = e.loop_ancestor() {
+                    Error::MalformedProjectStructure {
+                        path: p.to_path_buf(),
+                    }
+                } else {
+                    let path = e.path().map(Path::to_path_buf);
+
+                    if let Some(e) = e.io_error()
+                        && e.kind() == ErrorKind::NotFound
+                    {
+                        Error::NotFound {
+                            missing: EntityKind::Other,
+                            path,
+                        }
+                    } else {
+                        Error::FileIO {
+                            path,
+                            raw: e.into(),
+                        }
+                    }
+                }
+            })?;
+
+            match Box::pin(Self::try_discover_section_recursive(entry.path())).await {
+                Ok(subsection) => {
+                    let slug = Slug::try_from_dir(entry.path())?;
+                    subsections.insert(slug, subsection);
+                }
+                // If it's not a section, then maybe it's a page
+                Err(Error::NotFound {
+                    missing: EntityKind::Frontmatter,
+                    path: _,
+                }) => {
+                    if let Ok(page) = Self::try_discover_leaf_page(dir.to_path_buf()).await {
+                        let slug = Slug::try_from_dir(entry.path())?;
+                        pages.insert(slug, page);
+                    }
+                }
+                Err(e) => {
+                    return Err(e);
+                }
+            };
+        }
+
+        Ok(Section::new(
+            // TODO DROP
+            "".to_owned().into(),
+            index_page,
+            pages,
+            subsections,
+        ))
+    }
+
+    async fn try_discover_leaf_page(dir: PathBuf) -> Result<DiscoveredPage<Leaf>> {
+        let frontmatter_path = dir.join("page").with_extension("toml");
+
+        if try_exists(&frontmatter_path)
+            .await
+            .map_err(|e: std::io::Error| Error::FileIO {
+                path: Some(frontmatter_path.clone()),
+                raw: e,
+            })?
+        {
+            Ok(DiscoveredPage::leaf_page(dir))
+        } else {
+            Err(Error::NotFound {
+                missing: EntityKind::Frontmatter,
+                path: Some(frontmatter_path),
+            })
+        }
+    }
+
+    // TODO drop
+    async fn try_discover_index_page(dir: PathBuf) -> Result<DiscoveredPage<Index>> {
+        let frontmatter_path = dir.join("index").with_extension("toml");
+
+        if try_exists(&frontmatter_path)
+            .await
+            .map_err(|e: std::io::Error| Error::FileIO {
+                path: Some(frontmatter_path.clone()),
+                raw: e,
+            })?
+        {
+            Ok(DiscoveredPage::index_page(dir))
+        } else {
+            Err(Error::NotFound {
+                missing: EntityKind::Frontmatter,
+                path: Some(frontmatter_path),
+            })
+        }
     }
 }
 
