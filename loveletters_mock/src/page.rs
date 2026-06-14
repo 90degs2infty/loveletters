@@ -70,19 +70,18 @@ impl Frontmatter {
         let path = dir.join(&self.filestem).with_extension(&self.fileext);
         let toml = self
             .try_to_toml()
-            // TODO which context to specify here?
-            ?;
+            .with_context(|| "while converting a content page's frontmatter to toml")?;
 
         // No need to buffer, as we do a single write only
-        let mut file = File::create(&path)
-            .await
-            .with_context(|| format!("while creating a file at '{}'", path.display()))?;
+        let mut file = File::create(&path).await.with_context(|| {
+            format!("while creating a content page file at '{}'", path.display())
+        })?;
         file.write_all(toml.as_bytes())
             .await
             .with_context(|| format!("while writing a content page to '{}'", path.display()))?;
         file.flush()
             .await
-            .with_context(|| format!("while flushing the file at '{}'", path.display()))?;
+            .with_context(|| format!("while flushing the content page at '{}'", path.display()))?;
         Ok(())
     }
 
@@ -210,11 +209,21 @@ impl Page {
     /// Returns an error in case file system access or writing of subcomponents fails.
     pub async fn try_write_to_dir(&self, dir: &Path) -> Result<()> {
         if let Some(frontmatter) = self.frontmatter.as_ref() {
-            let () = frontmatter.try_write_to_dir(dir).await?;
+            let () = frontmatter.try_write_to_dir(dir).await.with_context(|| {
+                format!(
+                    "while writing a content page's frontmatter to directory '{}'",
+                    dir.display()
+                )
+            })?;
         }
 
         if let Some(content) = self.content.as_ref() {
-            let () = content.try_write_to_dir(dir).await?;
+            let () = content.try_write_to_dir(dir).await.with_context(|| {
+                format!(
+                    "while writing a content page's typst source to directory '{}'",
+                    dir.display()
+                )
+            })?;
         }
 
         Ok(())

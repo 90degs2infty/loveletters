@@ -92,35 +92,38 @@ impl Section {
                 )
             })?;
             index.try_write_to_dir(&index_dir).await.with_context(|| {
-                format!("while writing the index page to '{}'", index_dir.display())
+                format!(
+                    "while writing a section's index page to directory '{}'",
+                    index_dir.display()
+                )
             })?;
         }
 
-        // TODO write in parallel?
+        // ISSUE pages could be written concurrently to maybe speed up write out
         for (slug, page) in pages.iter() {
             let page_dir = dir.join(slug.as_str());
             fs::create_dir(&page_dir).await.with_context(|| {
                 format!(
-                    "while creating a directory at '{}' for the leaf page under slug '{}'",
+                    "while creating a leaf page's directory at '{}', slug '{}'",
                     page_dir.display(),
                     slug.as_str()
                 )
             })?;
             page.try_write_to_dir(&page_dir).await.with_context(|| {
                 format!(
-                    "while writing the leaf page under slug '{}' to '{}'",
+                    "while writing a leaf page to directory '{}', slug '{}'",
                     slug.as_str(),
                     page_dir.display()
                 )
             })?;
         }
 
-        // TODO write in parallel?
+        // ISSUE pages could be written concurrently to maybe speed up write out
         for (slug, subsection) in subsections.iter() {
             let subsection_dir = dir.join(slug.as_str());
             fs::create_dir(&subsection_dir).await.with_context(|| {
                 format!(
-                    "while creating a directory at '{}' for the subsection under slug '{}'",
+                    "while creating a subsection's directory at '{}', slug '{}'",
                     subsection_dir.display(),
                     slug.as_str()
                 )
@@ -129,7 +132,7 @@ impl Section {
                 .await
                 .with_context(|| {
                     format!(
-                        "while writing the subsection under slug '{}' to '{}'",
+                        "while writing a subsection to directory '{}', slug '{}'",
                         slug.as_str(),
                         subsection_dir.display()
                     )
@@ -426,10 +429,3 @@ fn prop_wrap_in_section(
         })
         .boxed()
 }
-
-// TODO context for applications of ?: provide but also streamline this context.
-// I.e. decide for a common structure - in the following, where to put the "while doing foo context":
-// - outside: do_foo().with_context("while doing foo") so that one can
-//   have more targeted context and also only has to specify with_context only once; however does not feel self-contained
-// - inside do_foo: to improve self-containedness but likely leads to
-//   a lot of similar calls .with_context("while doing foo") (i.e. for every occasion of ?).

@@ -23,7 +23,6 @@ fn prop_valid_url() -> impl Strategy<Value = Url> {
 }
 
 /// A project's title.
-// TODO: make cloneing more performant
 #[derive(Debug, Serialize, Clone)]
 pub struct Title(String);
 
@@ -35,7 +34,6 @@ impl Title {
 }
 
 /// A project's author.
-// TODO: make cloneing more performant
 #[derive(Debug, Serialize, Clone)]
 pub struct Author(String);
 
@@ -82,12 +80,27 @@ impl Config {
         let path = dir.join(&self.filestem).with_extension(&self.fileext);
         let toml = self
             .try_to_toml()
-            .with_context(|| "while serializing a loveletters configuration to toml")?;
+            .with_context(|| "while converting a loveletters configuration to toml")?;
 
         // No need to buffer, as we do a single write only
-        let mut file = File::create(&path).await?;
-        file.write_all(toml.as_bytes()).await?;
-        file.flush().await?;
+        let mut file = File::create(&path).await.with_context(|| {
+            format!(
+                "while creating a loveletters configuration file at '{}'",
+                path.display()
+            )
+        })?;
+        file.write_all(toml.as_bytes()).await.with_context(|| {
+            format!(
+                "while writing a loveletters configuration to '{}'",
+                path.display()
+            )
+        })?;
+        file.flush().await.with_context(|| {
+            format!(
+                "while flushing a loveletters configuration to '{}'",
+                path.display()
+            )
+        })?;
         Ok(())
     }
 
@@ -97,7 +110,8 @@ impl Config {
     ///
     /// Returns an error in case serialization is not possible.
     pub fn try_to_toml(&self) -> Result<String> {
-        let toml = toml::to_string(&self)?;
+        let toml = toml::to_string(&self)
+            .with_context(|| "while serializing a loveletters configuration to toml")?;
         Ok(toml)
     }
 }
@@ -247,17 +261,35 @@ impl Project {
         } = self;
 
         if let Some(config) = config {
-            config.try_write_to_dir(dir).await?;
+            config.try_write_to_dir(dir).await.with_context(|| {
+                format!(
+                    "while writing a project's configuration to directory '{}'",
+                    dir.display()
+                )
+            })?;
         }
 
         let content_dir = dir.join("content");
 
         if content.is_some() || *enforce_content_dir {
-            tokio::fs::create_dir(&content_dir).await?;
+            tokio::fs::create_dir(&content_dir).await.with_context(|| {
+                format!(
+                    "while creating a project's content directory at '{}'",
+                    content_dir.display()
+                )
+            })?;
         }
 
         if let Some(content) = content {
-            content.try_write_to_dir(&content_dir).await?;
+            content
+                .try_write_to_dir(&content_dir)
+                .await
+                .with_context(|| {
+                    format!(
+                        "while writing a project's content to directory '{}'",
+                        content_dir.display()
+                    )
+                })?;
         }
 
         Ok(())

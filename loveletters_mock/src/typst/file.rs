@@ -27,26 +27,27 @@ impl TypstSourceFile {
     /// Returns an error in case file system access fails.
     pub async fn try_write_to_dir(&self, dir: &Path) -> Result<()> {
         let path = dir.join(&self.filestem).with_extension(&self.fileext);
-        let mut file = BufWriter::new(
-            File::create(&path)
-                .await
-                .with_context(|| format!("while creating a file at '{}'", path.display()))?,
-        );
+        let mut file = BufWriter::new(File::create(&path).await.with_context(|| {
+            format!("while creating a typst source file at '{}'", path.display())
+        })?);
         for snippet in self.content.iter() {
             let _ = file
                 .write(snippet.as_string().as_bytes())
                 .await
                 .with_context(|| {
                     format!(
-                        "while writing the snippet '{}' to the source file at '{}'",
+                        "while writing the snippet '{}' to the typst source file at '{}'",
                         snippet.as_str(),
                         path.display()
                     )
                 })?;
         }
-        file.flush()
-            .await
-            .with_context(|| format!("while flushing the file at '{}'", path.display()))?;
+        file.flush().await.with_context(|| {
+            format!(
+                "while flushing the typst source file at '{}'",
+                path.display()
+            )
+        })?;
         Ok(())
     }
 }
