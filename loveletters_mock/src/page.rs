@@ -16,8 +16,6 @@ use crate::{
 };
 
 /// A page's title.
-// TODO replace strings with COW semantics to make cloneing cheap
-
 #[derive(Debug, Clone, Serialize)]
 pub struct Title(String);
 

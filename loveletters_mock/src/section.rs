@@ -11,6 +11,7 @@ use std::{
     collections::{HashMap, HashSet},
     hash,
     path::Path,
+    sync::Arc,
 };
 use tokio::fs;
 
@@ -57,12 +58,11 @@ impl Slug {
 }
 
 /// A self-contained section of content potentially including sub-sections and leaf pages.
-// TODO make clone cheaper
 #[derive(Debug, Clone)]
 pub struct Section {
     index: Option<Page>,
-    subsections: HashMap<Slug, Section>,
-    pages: HashMap<Slug, Page>,
+    subsections: Arc<HashMap<Slug, Section>>,
+    pages: Arc<HashMap<Slug, Page>>,
 
     // An excess page that is written top-level to this section's directory (and has to be ignored
     // during content discovery)
@@ -386,8 +386,6 @@ impl From<PageStrategyBuilder> for StrategyBuilder {
     }
 }
 
-// TODO make all the builders implement clone and debug?
-
 fn prop_wrap_in_section(
     index: BoxedStrategy<Option<Page>>,
     subsections: BoxedStrategy<Vec<Section>>,
@@ -421,8 +419,8 @@ fn prop_wrap_in_section(
 
             Section {
                 index,
-                subsections,
-                pages,
+                subsections: Arc::new(subsections),
+                pages: Arc::new(pages),
                 clutter,
             }
         })
