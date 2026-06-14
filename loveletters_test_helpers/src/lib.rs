@@ -39,5 +39,16 @@ pub async fn try_render_mock(mock: &Project) -> Result<StdResult<(), Error>> {
 
     let res = render_dir(input_dir.path(), output_dir.path()).await;
 
+    if res.is_ok() {
+        mock.verify_output_bundle(output_dir.path())
+            .await
+            .with_context(|| {
+                format!(
+                    "while verifying the output bundle at '{}'",
+                    output_dir.path().display()
+                )
+            })?;
+    }
+
     Ok(res)
 }
