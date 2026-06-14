@@ -11,7 +11,7 @@ use std::{
     env::{temp_dir, var_os},
     ffi::OsString,
     fs::{read as read_file, read_to_string, remove_dir_all},
-    io::{ErrorKind, Read},
+    io::Read,
     path::PathBuf,
     str::from_utf8,
     sync::{Arc, Mutex},
@@ -86,16 +86,8 @@ impl TypstEngine {
         // Top-level content and directory
         println!("Working on {}", root_file.display());
 
-        let root_src = read_to_string(&root_file).map_err(|e| match e.kind() {
-            ErrorKind::NotFound => Error::NotFound {
-                missing: EntityKind::TypstRoot,
-                path: root_file,
-            },
-            _ => Error::FileIO {
-                path: Some(root_file),
-                raw: e,
-            },
-        })?;
+        let root_src = read_to_string(&root_file)
+            .map_err(|e| Error::from_io_error(e, Some(root_file), EntityKind::TypstRoot))?;
 
         // Library
         let mut lib = Library::builder()

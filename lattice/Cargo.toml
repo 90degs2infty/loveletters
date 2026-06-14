@@ -1,0 +1,21 @@
+[package]
+name = "lattice"
+authors.workspace = true
+categories.workspace = true
+documentation.workspace = true
+description.workspace = true
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+publish.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+proptest.workspace = true
+serde = { workspace = true, features = ["derive"] }
+
+[lints]
+workspace = true

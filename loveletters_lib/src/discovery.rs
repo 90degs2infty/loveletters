@@ -1,11 +1,12 @@
 use std::{
     collections::HashMap,
+    io::ErrorKind,
     marker::PhantomData,
     path::{Path, PathBuf},
 };
 
 use crate::{
-    error::{Error, Result},
+    error::{EntityKind, Error, Result},
     frontmatter_parsing::PageWithFrontmatter,
     page::{Index, Leaf, Mode},
     section::Section,
@@ -22,6 +23,16 @@ impl Discoverer {
     pub fn try_traverse(
         content_dir: &Path,
     ) -> Result<Section<DiscoveredPage<Index>, DiscoveredPage<Leaf>>> {
+        // We eagerly check content_dir for existence. Note that this introduces TOCTOU bugs in case
+        // content_dir is deleted afterwards (but before collecting e.g. leaf pages). However, it
+        // improves error messages in the "ordinary" case, so we accept this risk.
+        if !content_dir.exists() {
+            return Err(Error::NotFound {
+                missing: EntityKind::ContentDirectory,
+                path: Some(content_dir.into()),
+            });
+        }
+
         // TODO: implement recursively to collect sub-sections of arbitrary depth of arbitrary name
         let posts = Discoverer::collect_leaf_pages(&content_dir.join("posts"))?;
         let toplevels = Discoverer::collect_leaf_pages(content_dir)?;
@@ -76,10 +87,16 @@ impl Discoverer {
                             path: p.to_path_buf(),
                         }
                     } else {
+                        let path= e.path().map(Path::to_path_buf);
+
+                        if let Some(e) = e.io_error() && e.kind() == ErrorKind::NotFound {
+                            Error::NotFound { missing: EntityKind::Other, path }
+                        } else {
                         Error::FileIO {
-                            path: e.path().map(Path::to_path_buf),
+                            path,
                             raw: e.into(),
                         }
+                    }
                     }
                 })?;
                 // We set min_depth to 2 above, so there will always be a parent - if not, this is a logic bug

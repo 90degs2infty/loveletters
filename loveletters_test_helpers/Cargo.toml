@@ -1,0 +1,29 @@
+[package]
+name = "loveletters_test_helpers"
+authors.workspace = true
+categories.workspace = true
+documentation.workspace = true
+description.workspace = true
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+publish.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+loveletters_lib.workspace = true
+loveletters_mock.workspace = true
+proptest.workspace = true
+serde = { workspace = true, features = ["derive"] }
+tempfile.workspace = true
+test-strategy.workspace = true
+time = { workspace = true, features = ["serde", "parsing"] }
+toml.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true

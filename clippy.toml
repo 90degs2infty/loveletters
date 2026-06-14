@@ -9,6 +9,10 @@ allowed-duplicate-crates = [
     "kurbo",
     "litemap",
     "png",
+    "quick-error",
+    "rand",
+    "rand_chacha",
+    "rand_core",
     "serde_spanned",
     "tinystr",
     "toml",
@@ -29,5 +33,5 @@ allowed-duplicate-crates = [
     "yoke-derive",
     "zerotrie",
     "zerovec",
-    "zerovec-derive",
+    "zerovec-derive"
 ]

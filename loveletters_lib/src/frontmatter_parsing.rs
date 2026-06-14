@@ -1,6 +1,5 @@
 use std::{fs, marker::PhantomData, path::PathBuf};
 
-use anyhow::Context;
 use serde::Deserialize;
 use typst::foundations::{Dict, IntoValue, Value};
 
@@ -36,13 +35,8 @@ where
                 path: Some(frontmatter_file.clone()),
                 raw: e,
             })?;
-        let frontmatter: F = toml::from_str(&frontmatter)
-            // TODO: this context is actually redundant
-            .with_context(|| "Failed to parse frontmatter.")
-            .map_err(|e| Error::MalformedFrontmatter {
-                location: frontmatter_file,
-                raw: e,
-            })?;
+        let frontmatter = toml::from_str(&frontmatter)
+            .map_err(|e| (Error::MalformedFrontmatter { raw: Box::new(e) }).at(frontmatter_file))?;
         Ok(Self {
             content_dir: dir,
             frontmatter,

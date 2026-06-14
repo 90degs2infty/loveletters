@@ -1,0 +1,28 @@
+[package]
+name = "loveletters_mock"
+authors.workspace = true
+categories.workspace = true
+documentation.workspace = true
+description.workspace = true
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+publish.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+lattice.workspace = true
+proptest.workspace = true
+proptest_ext.workspace = true
+serde = { workspace = true, features = ["derive"] }
+time = { workspace = true, features = ["serde", "parsing"] }
+tokio = { workspace = true, features = ["fs", "io-util"] }
+toml.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true
