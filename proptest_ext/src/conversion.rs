@@ -30,8 +30,8 @@ fn format_anyhow(e: &anyhow::Error) -> String {
     e.chain()
         .rev()
         .skip(1)
-        .fold(format!("{}", e.root_cause()), |msg, c| {
-            msg + &format!("\n\t{c}")
+        .fold(format!("{:?}", e.root_cause()), |msg, c| {
+            msg + &format!("\n\t{c:?}")
         })
 }
 

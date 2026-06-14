@@ -12,12 +12,8 @@ where
     T: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // TODO is there a nicer way of displaying the value as falling back to the inner value's Debug impl?
-        write!(
-            f,
-            "unexpected value {:?} did not match pattern {}",
-            self.inner, self.pattern
-        )
+        let Self { inner, pattern } = self;
+        write!(f, "value {:?} did not match pattern {}", inner, pattern)
     }
 }
 
