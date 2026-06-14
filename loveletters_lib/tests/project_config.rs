@@ -33,7 +33,7 @@ async fn project_config_requires_loveletters_filestem(
     #[strategy(
         {
             let mut project = ProjectStrategyBuilder::empty();
-            project.config_mut().expect("empty project should have a toplevel configuration").with_filestem("[a-z]{4}".boxed());
+            project.config_filename_mut().with_stem("[a-z]{4}".boxed());
             project.build()
         }
     )]
@@ -55,7 +55,7 @@ async fn project_config_requires_toml_fileext(
     #[strategy(
         {
             let mut project = ProjectStrategyBuilder::empty();
-            project.config_mut().expect("empty project should have a toplevel configuration").with_filestem("[a-z]{0,3}".boxed());
+            project.config_filename_mut().with_ext("[a-z]{0,3}".boxed());
             project.build()
         }
     )]

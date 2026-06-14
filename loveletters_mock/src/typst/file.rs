@@ -12,21 +12,15 @@ use crate::typst::snippet::Snippet;
 #[derive(Debug, Clone)]
 pub struct TypstSourceFile {
     content: Arc<Vec<Snippet>>,
-
-    filestem: String,
-    fileext: String,
 }
 
 impl TypstSourceFile {
-    /// Try to write this [`TypstSourceFile`] to the specified directory.
-    ///
-    /// Note that the output filename is _not_ determined by the specified `dir` but by this [`TypstSourceFile`].
+    /// Try to write this [`TypstSourceFile`] to the specified `path`.
     ///
     /// # Errors
     ///
     /// Returns an error in case file system access fails.
-    pub async fn try_write_to_dir(&self, dir: &Path) -> Result<()> {
-        let path = dir.join(&self.filestem).with_extension(&self.fileext);
+    pub async fn try_write_to(&self, path: &Path) -> Result<()> {
         let mut file = BufWriter::new(File::create(&path).await.with_context(|| {
             format!("while creating a typst source file at '{}'", path.display())
         })?);
@@ -55,9 +49,6 @@ impl TypstSourceFile {
 /// Builder to configure [`Strategy`]s generating [`TypstSourceFile`]s.
 pub struct StrategyBuilder {
     content: Arc<Vec<BoxedStrategy<Snippet>>>,
-
-    filestem: BoxedStrategy<String>,
-    fileext: BoxedStrategy<String>,
 }
 
 impl StrategyBuilder {
@@ -65,8 +56,6 @@ impl StrategyBuilder {
     pub fn empty() -> Self {
         Self {
             content: Arc::new(Vec::new()),
-            filestem: "page".boxed(),
-            fileext: "typ".boxed(),
         }
     }
 
@@ -82,34 +71,11 @@ impl StrategyBuilder {
         self
     }
 
-    /// Set the generated source files' filename stem component.
-    pub fn with_filestem(
-        &mut self,
-        filestem: impl Strategy<Value = String> + 'static,
-    ) -> &mut Self {
-        self.filestem = filestem.boxed();
-        self
-    }
-
-    /// Set the generated source files' filename extension component.
-    pub fn with_fileext(&mut self, fileext: impl Strategy<Value = String> + 'static) -> &mut Self {
-        self.fileext = fileext.boxed();
-        self
-    }
-
     /// Create a new [`Strategy`] as configured in this builder.
     pub fn build(&self) -> impl Strategy<Value = TypstSourceFile> + use<> {
-        let Self {
-            content,
-            filestem,
-            fileext,
-        } = self;
-        (content.clone(), filestem.clone(), fileext.clone()).prop_map(
-            |(content, filestem, fileext)| TypstSourceFile {
-                content: Arc::new(content),
-                filestem,
-                fileext,
-            },
-        )
+        let Self { content } = self;
+        (content.clone()).prop_map(|content| TypstSourceFile {
+            content: Arc::new(content),
+        })
     }
 }

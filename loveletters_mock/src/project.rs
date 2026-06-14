@@ -9,7 +9,10 @@ use std::path::Path;
 use tokio::{fs::File, io::AsyncWriteExt};
 use url::Url;
 
-use crate::section::{Section, StrategyBuilder as SectionStrategyBuilder};
+use crate::{
+    filename::{Filename, StrategyBuilder as FilenameStrategyBuilder},
+    section::{Section, StrategyBuilder as SectionStrategyBuilder},
+};
 
 fn prop_valid_url() -> impl Strategy<Value = Url> {
     // at least foo.bar with optional leading subdomains and optional trailing paths (paths can end
@@ -56,11 +59,6 @@ pub struct Config {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     excess: Option<String>,
-
-    #[serde(skip_serializing)]
-    filestem: String,
-    #[serde(skip_serializing)]
-    fileext: String,
 }
 
 impl Config {
@@ -76,8 +74,7 @@ impl Config {
     /// # Errors
     ///
     /// Returns an error in case file system access fails.
-    pub async fn try_write_to_dir(&self, dir: &Path) -> Result<()> {
-        let path = dir.join(&self.filestem).with_extension(&self.fileext);
+    pub async fn try_write_to(&self, path: &Path) -> Result<()> {
         let toml = self
             .try_to_toml()
             .with_context(|| "while converting a loveletters configuration to toml")?;
@@ -123,9 +120,6 @@ pub struct ConfigStrategyBuilder {
     root: BoxedStrategy<So<Url, String>>,
 
     excess: BoxedStrategy<Option<String>>,
-
-    filestem: BoxedStrategy<String>,
-    fileext: BoxedStrategy<String>,
 }
 
 impl ConfigStrategyBuilder {
@@ -137,9 +131,6 @@ impl ConfigStrategyBuilder {
             root: prop_valid_url().into_correct().boxed(),
 
             excess: Just(None).boxed(),
-
-            filestem: Just("loveletters".to_owned()).boxed(),
-            fileext: Just("toml".to_owned()).boxed(),
         }
     }
 
@@ -190,19 +181,6 @@ impl ConfigStrategyBuilder {
         self.excess = Just(None).boxed();
         self
     }
-
-    /// Set the generated [`Config`]s' filename stem component.
-    pub fn with_filestem(&mut self, filestem: BoxedStrategy<String>) -> &mut Self {
-        self.filestem = filestem;
-        self
-    }
-
-    /// Set the generated [`Config`]s' filename extension component.
-    pub fn with_fileext(&mut self, fileext: BoxedStrategy<String>) -> &mut Self {
-        self.fileext = fileext;
-        self
-    }
-
     /// Create a new [`Strategy`] generating [`Config`]s as configured.
     pub fn build(&self) -> impl Strategy<Value = Config> + use<> {
         let Self {
@@ -210,26 +188,16 @@ impl ConfigStrategyBuilder {
             author,
             root,
             excess,
-            filestem,
-            fileext,
         } = self;
 
-        (
-            title.clone(),
-            author.clone(),
-            root.clone(),
-            excess.clone(),
-            filestem.clone(),
-            fileext.clone(),
-        )
-            .prop_map(|(title, author, root, excess, filestem, fileext)| Config {
+        (title.clone(), author.clone(), root.clone(), excess.clone()).prop_map(
+            |(title, author, root, excess)| Config {
                 title,
                 author,
                 root,
                 excess,
-                filestem,
-                fileext,
-            })
+            },
+        )
     }
 }
 
@@ -237,8 +205,9 @@ impl ConfigStrategyBuilder {
 #[derive(Debug, Clone)]
 pub struct Project {
     config: Option<Config>,
-    content: Option<Section>,
+    config_filename: Filename,
 
+    content: Option<Section>,
     enforce_content_dir: bool,
 }
 
@@ -256,15 +225,19 @@ impl Project {
     pub async fn try_write_to_dir(&self, dir: &Path) -> Result<()> {
         let Self {
             config,
+            config_filename,
             content,
             enforce_content_dir,
         } = self;
 
         if let Some(config) = config {
-            config.try_write_to_dir(dir).await.with_context(|| {
+            let path = dir
+                .join(config_filename.stem())
+                .with_extension(config_filename.ext());
+            config.try_write_to(&path).await.with_context(|| {
                 format!(
-                    "while writing a project's configuration to directory '{}'",
-                    dir.display()
+                    "while writing a project's configuration to '{}'",
+                    path.display()
                 )
             })?;
         }
@@ -299,8 +272,9 @@ impl Project {
 /// Builder to configure [`Strategy`]s generating [`Project`]s.
 pub struct ProjectStrategyBuilder {
     config: Option<ConfigStrategyBuilder>,
-    content: Option<SectionStrategyBuilder>,
+    config_filename: FilenameStrategyBuilder,
 
+    content: Option<SectionStrategyBuilder>,
     enforce_content_dir: BoxedStrategy<bool>,
 }
 
@@ -309,6 +283,7 @@ impl ProjectStrategyBuilder {
     pub fn empty() -> Self {
         Self {
             config: Some(ConfigStrategyBuilder::valid()),
+            config_filename: FilenameStrategyBuilder::new("loveletters", "toml"),
             content: Some(SectionStrategyBuilder::empty()),
             enforce_content_dir: Just(false).boxed(),
         }
@@ -317,6 +292,16 @@ impl ProjectStrategyBuilder {
     /// Get mutable access to the generated [`Project`]s' toplevel config configuration, if any.
     pub fn config_mut(&mut self) -> Option<&mut ConfigStrategyBuilder> {
         self.config.as_mut()
+    }
+
+    /// Get access to the generated [`Project`]'s configuration filename.
+    pub fn config_filename(&self) -> &FilenameStrategyBuilder {
+        &self.config_filename
+    }
+
+    /// Get mutable access to the generated [`Project`]'s configuration filename.
+    pub fn config_filename_mut(&mut self) -> &mut FilenameStrategyBuilder {
+        &mut self.config_filename
     }
 
     /// Get mutable access to the generated [`Project`]s' content configuration, if any.
@@ -366,6 +351,7 @@ impl ProjectStrategyBuilder {
     pub fn build(&self) -> impl Strategy<Value = Project> + use<> {
         let Self {
             config,
+            config_filename,
             content,
             enforce_content_dir,
         } = self;
@@ -375,16 +361,20 @@ impl ProjectStrategyBuilder {
                 .as_ref()
                 .map(ConfigStrategyBuilder::build)
                 .transpose(),
+            config_filename.build(),
             content
                 .as_ref()
                 .map(SectionStrategyBuilder::build)
                 .transpose(),
             enforce_content_dir.clone(),
         )
-            .prop_map(|(config, content, enforce_content_dir)| Project {
-                config,
-                content,
-                enforce_content_dir,
-            })
+            .prop_map(
+                |(config, config_filename, content, enforce_content_dir)| Project {
+                    config,
+                    config_filename,
+                    content,
+                    enforce_content_dir,
+                },
+            )
     }
 }

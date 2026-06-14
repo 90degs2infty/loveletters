@@ -11,6 +11,7 @@ use tokio::{fs::File, io::AsyncWriteExt};
 use toml;
 
 use crate::{
+    filename::{Filename, StrategyBuilder as FilenameStrategyBuilder},
     section::StrategyBuilder as SectionStrategyBuilder,
     typst::file::{StrategyBuilder as TypstStrategyBuilder, TypstSourceFile},
 };
@@ -45,11 +46,6 @@ pub struct Frontmatter {
     publication: So<IsoDate, String>,
     #[serde(skip_serializing_if = "So::is_vacant")]
     title: So<Title, String>,
-
-    #[serde(skip_serializing)]
-    filestem: String,
-    #[serde(skip_serializing)]
-    fileext: String,
 }
 
 impl Frontmatter {
@@ -58,16 +54,12 @@ impl Frontmatter {
         FrontmatterStrategyBuilder::valid()
     }
 
-    /// Write this [`Frontmatter`] to the specified `dir`ectory.
-    ///
-    /// Note that `dir` does _not_ indicate the output file's name!
-    /// The output file's name is prescribed by this `Frontmatter`.
+    /// Write this [`Frontmatter`] to the specified `path`.
     ///
     /// # Errors
     ///
     /// Returns an error in case file system access fails.
-    pub async fn try_write_to_dir(&self, dir: &Path) -> Result<()> {
-        let path = dir.join(&self.filestem).with_extension(&self.fileext);
+    pub async fn try_write_to(&self, path: &Path) -> Result<()> {
         let toml = self
             .try_to_toml()
             .with_context(|| "while converting a content page's frontmatter to toml")?;
@@ -101,9 +93,6 @@ impl Frontmatter {
 pub struct FrontmatterStrategyBuilder {
     publication: BoxedStrategy<So<IsoDate, String>>,
     title: BoxedStrategy<So<Title, String>>,
-
-    filestem: BoxedStrategy<String>,
-    fileext: BoxedStrategy<String>,
 }
 
 impl FrontmatterStrategyBuilder {
@@ -120,8 +109,6 @@ impl FrontmatterStrategyBuilder {
                 .into_correct()
                 .boxed(),
             title: Title::prop_valid().into_correct().boxed(),
-            filestem: "page".boxed(),
-            fileext: "toml".boxed(),
         }
     }
 
@@ -151,41 +138,11 @@ impl FrontmatterStrategyBuilder {
         self
     }
 
-    /// Set the generated source files' filename stem component.
-    pub fn with_filestem(
-        &mut self,
-        filestem: impl Strategy<Value = String> + 'static,
-    ) -> &mut Self {
-        self.filestem = filestem.boxed();
-        self
-    }
-
-    /// Set the generated source files' filename extension component.
-    pub fn with_fileext(&mut self, fileext: impl Strategy<Value = String> + 'static) -> &mut Self {
-        self.fileext = fileext.boxed();
-        self
-    }
-
     /// Create a new [`Strategy`] generating [`Frontmatter`]s as configured.
     pub fn build(&self) -> impl Strategy<Value = Frontmatter> + use<> {
-        let Self {
-            publication,
-            title,
-            filestem,
-            fileext,
-        } = self;
-        (
-            publication.clone(),
-            title.clone(),
-            filestem.clone(),
-            fileext.clone(),
-        )
-            .prop_map(|(publication, title, filestem, fileext)| Frontmatter {
-                publication,
-                title,
-                filestem,
-                fileext,
-            })
+        let Self { publication, title } = self;
+        (publication.clone(), title.clone())
+            .prop_map(|(publication, title)| Frontmatter { publication, title })
     }
 }
 
@@ -193,7 +150,10 @@ impl FrontmatterStrategyBuilder {
 #[derive(Debug, Clone)]
 pub struct Page {
     frontmatter: Option<Frontmatter>,
+    frontmatter_filename: Filename,
+
     content: Option<TypstSourceFile>,
+    typst_filename: Filename,
 }
 
 impl Page {
@@ -209,19 +169,25 @@ impl Page {
     /// Returns an error in case file system access or writing of subcomponents fails.
     pub async fn try_write_to_dir(&self, dir: &Path) -> Result<()> {
         if let Some(frontmatter) = self.frontmatter.as_ref() {
-            let () = frontmatter.try_write_to_dir(dir).await.with_context(|| {
+            let path = dir
+                .join(self.frontmatter_filename.stem())
+                .with_extension(self.frontmatter_filename.ext());
+            let () = frontmatter.try_write_to(&path).await.with_context(|| {
                 format!(
-                    "while writing a content page's frontmatter to directory '{}'",
-                    dir.display()
+                    "while writing a content page's frontmatter to '{}'",
+                    path.display()
                 )
             })?;
         }
 
         if let Some(content) = self.content.as_ref() {
-            let () = content.try_write_to_dir(dir).await.with_context(|| {
+            let path = dir
+                .join(self.typst_filename.stem())
+                .with_extension(self.typst_filename.ext());
+            let () = content.try_write_to(&path).await.with_context(|| {
                 format!(
-                    "while writing a content page's typst source to directory '{}'",
-                    dir.display()
+                    "while writing a content page's typst source to '{}'",
+                    path.display()
                 )
             })?;
         }
@@ -233,7 +199,9 @@ impl Page {
 /// Builder to configure the generation of [`Page`]s.
 pub struct PageStrategyBuilder {
     frontmatter: Option<FrontmatterStrategyBuilder>,
+    frontmatter_filename: FilenameStrategyBuilder,
     content: Option<TypstStrategyBuilder>,
+    typst_filename: FilenameStrategyBuilder,
 }
 
 impl PageStrategyBuilder {
@@ -241,7 +209,9 @@ impl PageStrategyBuilder {
     pub fn valid() -> Self {
         Self {
             frontmatter: Some(FrontmatterStrategyBuilder::valid()),
+            frontmatter_filename: FilenameStrategyBuilder::new("page", "toml"),
             content: Some(TypstStrategyBuilder::empty()),
+            typst_filename: FilenameStrategyBuilder::new("page", "typ"),
         }
     }
 
@@ -260,6 +230,16 @@ impl PageStrategyBuilder {
         self.frontmatter.as_mut()
     }
 
+    /// Get access to the generated [`Page`]'s frontmatter configuration filename.
+    pub fn frontmatter_filename(&self) -> &FilenameStrategyBuilder {
+        &self.frontmatter_filename
+    }
+
+    /// Get mutable access to the generated [`Page`]'s frontmatter configuration filename.
+    pub fn frontmatter_filename_mut(&mut self) -> &mut FilenameStrategyBuilder {
+        &mut self.frontmatter_filename
+    }
+
     /// Get access to the generated [`Page`]'s typst content, if any.
     pub fn content(&self) -> Option<&TypstStrategyBuilder> {
         self.content.as_ref()
@@ -270,23 +250,43 @@ impl PageStrategyBuilder {
         self.content.as_mut()
     }
 
+    /// Get access to the generated [`Page`]'s typst source filename.
+    pub fn typst_filename(&self) -> &FilenameStrategyBuilder {
+        &self.typst_filename
+    }
+
+    /// Get mutable access to the generated [`Page`]'s typst source filename.
+    pub fn typst_filename_mut(&mut self) -> &mut FilenameStrategyBuilder {
+        &mut self.typst_filename
+    }
+
     /// Create a new [`Strategy`] generating [`Page`]'s as configured.
     pub fn build(&self) -> impl Strategy<Value = Page> + use<> {
+        let Self {
+            frontmatter,
+            frontmatter_filename,
+            content,
+            typst_filename,
+        } = self;
         (
-            self.frontmatter
+            frontmatter
                 .as_ref()
                 .map(FrontmatterStrategyBuilder::build)
                 .transpose(),
-            self.content
+            frontmatter_filename.build(),
+            content
                 .as_ref()
                 .map(TypstStrategyBuilder::build)
                 .transpose(),
+            typst_filename.build(),
         )
-            .prop_map(|(frontmatter, content)| Page {
-                frontmatter,
-                content,
-            })
+            .prop_map(
+                |(frontmatter, frontmatter_filename, content, typst_filename)| Page {
+                    frontmatter,
+                    frontmatter_filename,
+                    content,
+                    typst_filename,
+                },
+            )
     }
 }
-
-// TODO frontmatters should actually not contain the filestem/-ext. Instead, the wrapping page should store this information and pass a self-contained file-path to `try_write_to_dir`.
