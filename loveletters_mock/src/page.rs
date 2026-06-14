@@ -1,14 +1,19 @@
 //! Self-contained pages of content.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use lattice::{IntoCorrect, Site, So};
 use proptest::prelude::*;
 use proptest_ext::transpose::Transpose;
 use serde::Serialize;
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 use time::{Date, UtcDateTime, serde::format_description};
-use tokio::{fs::File, io::AsyncWriteExt};
+use tokio::{
+    fs::{self, File},
+    io::AsyncWriteExt,
+};
+use tokio_stream::StreamExt;
 use toml;
+use walkdir::WalkDir;
 
 use crate::{
     filename::{Filename, StrategyBuilder as FilenameStrategyBuilder},
@@ -149,6 +154,11 @@ impl FrontmatterStrategyBuilder {
     }
 }
 
+pub enum VerificationMode {
+    IndexPage,
+    LeafPage,
+}
+
 /// A self-contained page of content.
 #[derive(Debug, Clone)]
 pub struct Page {
@@ -197,6 +207,64 @@ impl Page {
         }
 
         Ok(())
+    }
+
+    pub async fn verify_output_bundle(&self, dir: &Path, mode: VerificationMode) -> Result<()> {
+        // Let's first ensure that all children we see are actually expected.
+        //
+        // This check has to be skipped when in mode "index page", as a section's index page is placed next to the section's subsection directories.
+        if matches!(mode, VerificationMode::LeafPage) {
+            let mut children = tokio_stream::iter(WalkDir::new(dir).min_depth(1).max_depth(1));
+
+            while let Some(entry) = children.next().await {
+                let entry = entry.with_context(|| {
+                    format!(
+                        "while enumerating children of '{}
+        '",
+                        dir.display()
+                    )
+                })?;
+                let suffix = entry.path().file_name().with_context(|| {
+                    format!(
+                        "while getting the last component from '{}'",
+                        entry.path().display()
+                    )
+                })?;
+                let suffix = suffix
+                    .to_str()
+                    .with_context(|| format!("while converting '{}' to UTF-8", suffix.display()))?;
+
+                let expected = self.is_expected_filesystem_child(suffix);
+
+                if !expected {
+                    bail!(
+                        "unexpected child '{}' at '{}' while checking a page's output bundle at '{}'",
+                        suffix,
+                        entry.path().display(),
+                        dir.display()
+                    )
+                }
+            }
+        }
+
+        // Now let's ensure all expected children are actually there (and have the right content).
+        let index_path = dir.join("index").with_extension("html");
+        let index_exists = fs::try_exists(&index_path).await.with_context(|| {
+            format!(
+                "while checking for existence of 'index.html' at '{}'",
+                index_path.display()
+            )
+        })?;
+
+        if !index_exists {
+            bail!("'index.html' does not exist at '{}'", index_path.display())
+        }
+
+        Ok(())
+    }
+
+    pub fn is_expected_filesystem_child(&self, child: &str) -> bool {
+        child == "index.html"
     }
 }
 

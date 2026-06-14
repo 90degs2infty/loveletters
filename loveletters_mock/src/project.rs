@@ -272,6 +272,14 @@ impl Project {
 
         Ok(())
     }
+
+    pub async fn verify_output_bundle(&self, dir: &Path) -> Result<()> {
+        self.content
+            .as_ref()
+            .expect("verify_output_bundle should only be called on valid projects")
+            .verify_output_bundle(dir)
+            .await
+    }
 }
 
 /// Builder to configure [`Strategy`]s generating [`Project`]s.

@@ -1,6 +1,6 @@
 //! Self-contained sections of content.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use proptest::{
     collection::{hash_set, vec},
     prelude::*,
@@ -8,14 +8,18 @@ use proptest::{
 };
 use proptest_ext::transpose::Transpose;
 use std::{
-    collections::{HashMap, HashSet},
-    hash,
+    borrow::Borrow,
+    collections::{HashMap, HashSet, hash_map::Keys},
+    hash::{self},
     path::Path,
     sync::Arc,
 };
+use time::Month::October;
 use tokio::fs;
+use tokio_stream::StreamExt;
+use walkdir::WalkDir;
 
-use crate::page::{Page, PageStrategyBuilder};
+use crate::page::{Page, PageStrategyBuilder, VerificationMode};
 
 // set's size has to match the sum of sizes - this is not checked!
 //
@@ -55,6 +59,18 @@ impl Slug {
     /// Strategy generating valid [`Slug`]s.
     pub fn prop_valid() -> impl Strategy<Value = Self> {
         "[a-zA-Z0-9]{1,}".prop_map(Self)
+    }
+}
+
+impl Borrow<str> for Slug {
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl AsRef<str> for Slug {
+    fn as_ref(&self) -> &str {
+        self.as_str()
     }
 }
 
@@ -145,6 +161,87 @@ impl Section {
                 .try_write_to_dir(dir)
                 .await
                 .with_context(|| format!("while writing a clutter page to '{}'", dir.display()))?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn verify_output_bundle(&self, dir: &Path) -> Result<()> {
+        let index = self
+            .index
+            .as_ref()
+            .expect("verify_output_bundle should only be called on valid sections");
+
+        // Let's first ensure that all children we see are actually expected.
+        let mut children = tokio_stream::iter(WalkDir::new(dir).min_depth(1).max_depth(1));
+
+        while let Some(entry) = children.next().await {
+            let entry = entry.with_context(|| {
+                format!(
+                    "while enumerating children of '{}
+        '",
+                    dir.display()
+                )
+            })?;
+            let suffix = entry.path().file_name().with_context(|| {
+                format!(
+                    "while getting the last component from '{}'",
+                    entry.path().display()
+                )
+            })?;
+            let suffix = suffix
+                .to_str()
+                .with_context(|| format!("while converting '{}' to UTF-8", suffix.display()))?;
+
+            let expected = index.is_expected_filesystem_child(suffix)
+                || self.pages.contains_key(suffix)
+                || self.subsections.contains_key(suffix);
+
+            if !expected {
+                bail!(
+                    "unexpected child '{}' at '{}' while checking a section's output bundle at '{}'",
+                    suffix,
+                    entry.path().display(),
+                    dir.display()
+                )
+            }
+        }
+
+        // Now let's ensure all expected children are actually there (and have the right content).
+        index
+            .verify_output_bundle(dir, VerificationMode::IndexPage)
+            .await
+            .with_context(|| {
+                format!(
+                    "while verifying the output bundle in '{}' for a section's index page",
+                    dir.display()
+                )
+            })?;
+
+        for (slug, page) in self.pages.iter() {
+            let child = dir.join(slug.as_str());
+            page.verify_output_bundle(&child, VerificationMode::LeafPage)
+                .await
+                .with_context(|| {
+                    format!(
+                        "while verifying the output bundle in '{}' for the leaf page at '{}'",
+                        child.display(),
+                        slug.as_str()
+                    )
+                })?;
+        }
+
+        for (slug, subsec) in self.subsections.iter() {
+            let child = dir.join(slug.as_str());
+            Box::pin(subsec.verify_output_bundle(&child))
+                .await
+                .with_context(|| {
+                    format!(
+                        "while verifying the output bundle in '{}' for the subsection at '{}'",
+                        child.display(),
+                        slug.as_str()
+                    )
+                })?;
         }
 
         Ok(())

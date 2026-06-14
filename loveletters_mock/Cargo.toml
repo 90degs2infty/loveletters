@@ -21,8 +21,10 @@ proptest_ext.workspace = true
 serde = { workspace = true, features = ["derive"] }
 time = { workspace = true, features = ["serde", "parsing"] }
 tokio = { workspace = true, features = ["fs", "io-util"] }
+tokio-stream.workspace = true
 toml.workspace = true
 url.workspace = true
+walkdir.workspace = true
 
 [lints]
 workspace = true
