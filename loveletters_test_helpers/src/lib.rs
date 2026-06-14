@@ -37,7 +37,7 @@ pub async fn try_render_mock(mock: &Project) -> Result<StdResult<(), Error>> {
             )
         })?;
 
-    let res = render_dir(input_dir.path(), output_dir.path());
+    let res = render_dir(input_dir.path(), output_dir.path()).await;
 
     Ok(res)
 }

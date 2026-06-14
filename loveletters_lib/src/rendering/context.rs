@@ -1,12 +1,8 @@
 use typst::foundations::{Dict, IntoValue, Str, Value};
 
 use crate::{
-    config::Config,
-    content::{IndexFrontmatter, LeafFrontmatter},
-    frontmatter_parsing::PageWithFrontmatter,
-    page::{Index, Leaf},
-    section::Section,
-    slug::Slug,
+    config::Config, content::Frontmatter, frontmatter_parsing::PageWithFrontmatter,
+    section::Section, slug::Slug,
 };
 
 #[derive(Debug, Clone)]
@@ -16,13 +12,7 @@ pub struct ProjectContext {
 }
 
 impl ProjectContext {
-    pub fn new(
-        content: &Section<
-            PageWithFrontmatter<Index, IndexFrontmatter>,
-            PageWithFrontmatter<Leaf, LeafFrontmatter>,
-        >,
-        config: Config,
-    ) -> Self {
+    pub fn new(content: &Section<PageWithFrontmatter<Frontmatter>>, config: Config) -> Self {
         Self {
             content: content.to_typst(),
             config,

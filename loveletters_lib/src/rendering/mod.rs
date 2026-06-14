@@ -3,10 +3,10 @@ mod driver_typst;
 
 use crate::{
     bundleing::{InMemFile, PageBundle},
-    content::{IndexFrontmatter, LeafFrontmatter},
+    constants::{PAGE_FILESTEM, TYPST_FILEEXT},
+    content::Frontmatter,
     error::{Error, Result},
     frontmatter_parsing::PageWithFrontmatter,
-    page::{Index, Leaf, Mode},
     rendering::context::{PageContext, ProjectContext},
     section::Section,
 };
@@ -14,7 +14,6 @@ use driver_typst::TypstEngine;
 use std::{
     error,
     fmt::{self, Debug, Display},
-    marker::PhantomData,
     path::PathBuf,
 };
 use typst::{
@@ -81,18 +80,16 @@ impl error::Error for TypstError {
     }
 }
 
-pub struct RenderedPage<M> {
+pub struct RenderedPage {
     content_dir: PathBuf,
     rendering: HtmlDocument,
-    m: PhantomData<M>,
 }
 
-impl<M> RenderedPage<M> {
+impl RenderedPage {
     pub fn new(content_dir: PathBuf, rendering: HtmlDocument) -> Self {
         Self {
             content_dir,
             rendering,
-            m: PhantomData,
         }
     }
 
@@ -123,11 +120,8 @@ impl Renderer {
 
     pub fn try_render(
         &self,
-        content: Section<
-            PageWithFrontmatter<Index, IndexFrontmatter>,
-            PageWithFrontmatter<Leaf, LeafFrontmatter>,
-        >,
-    ) -> Result<Section<RenderedPage<Index>, RenderedPage<Leaf>>> {
+        content: Section<PageWithFrontmatter<Frontmatter>>,
+    ) -> Result<Section<RenderedPage>> {
         content.try_walk(
             |path, page| {
                 let ctx = PageContext::new(path, None);
@@ -140,19 +134,18 @@ impl Renderer {
         )
     }
 
-    pub fn try_render_dir<M>(
+    pub fn try_render_dir(
         &self,
         content_dir: PathBuf,
         page_ctx: PageContext,
-    ) -> Result<RenderedPage<M>>
-    where
-        M: Mode,
-    {
+    ) -> Result<RenderedPage> {
         // TODO: should probably be something like
         // let engine = TypstEngine::new();
         // let entrypoint = engine.wrap(&self);
         // or similar...
-        let root_file = M::typst_filename().into();
+        let root_file = PathBuf::new()
+            .join(PAGE_FILESTEM)
+            .with_extension(TYPST_FILEEXT);
         let entrypoint = TypstEngine::new(
             content_dir.clone(),
             root_file,

@@ -4,23 +4,15 @@ use typst::foundations::{Dict, IntoValue, Value};
 
 use crate::{error::Result, slug::Slug};
 
-pub struct Section<I, L> {
-    // TODO drop
-    slug: Slug,
-    index: I,
-    pages: HashMap<Slug, L>,
-    sub_sections: HashMap<Slug, Section<I, L>>,
+pub struct Section<P> {
+    index: P,
+    pages: HashMap<Slug, P>,
+    sub_sections: HashMap<Slug, Section<P>>,
 }
 
-impl<I, L> Section<I, L> {
-    pub fn new(
-        slug: Slug,
-        index: I,
-        pages: HashMap<Slug, L>,
-        sub_sections: HashMap<Slug, Section<I, L>>,
-    ) -> Self {
+impl<P> Section<P> {
+    pub fn new(index: P, pages: HashMap<Slug, P>, sub_sections: HashMap<Slug, Section<P>>) -> Self {
         Self {
-            slug,
             index,
             pages,
             sub_sections,
@@ -30,14 +22,10 @@ impl<I, L> Section<I, L> {
     /// Map this section.
     ///
     /// If you need access to a [`Section`]'s fully qualified path, see [`Section::try_walk`] instead.
-    pub fn try_map<J, M, FIndex, FLeaf>(
-        mut self,
-        f_index: FIndex,
-        f_leaf: FLeaf,
-    ) -> Result<Section<J, M>>
+    pub fn try_map<Q, FIndex, FLeaf>(mut self, f_index: FIndex, f_leaf: FLeaf) -> Result<Section<Q>>
     where
-        FIndex: Fn(I) -> Result<J> + Clone, // Clone to prevent recursive type
-        FLeaf: Fn(L) -> Result<M> + Clone,
+        FIndex: Fn(P) -> Result<Q> + Clone, // Clone to prevent recursive type
+        FLeaf: Fn(P) -> Result<Q> + Clone,
     {
         let new_index = f_index(self.index)?;
         let new_leafs = self
@@ -57,7 +45,6 @@ impl<I, L> Section<I, L> {
                 .collect::<Result<HashMap<_, _>>>()?
         };
         Ok(Section {
-            slug: self.slug,
             index: new_index,
             pages: new_leafs,
             sub_sections: new_subsecs,
@@ -68,15 +55,15 @@ impl<I, L> Section<I, L> {
         clippy::needless_pass_by_value,
         reason = "path is cloned multiple times inside this function so do not pretend we do not need ownership"
     )]
-    fn try_walk_helper<J, M, FIndex, FLeaf>(
+    fn try_walk_helper<Q, FIndex, FLeaf>(
         mut self,
         path: Vec<Slug>,
         f_index: FIndex,
         f_leaf: FLeaf,
-    ) -> Result<Section<J, M>>
+    ) -> Result<Section<Q>>
     where
-        FIndex: Fn(&[Slug], I) -> Result<J> + Clone, // Clone to prevent recursive type
-        FLeaf: Fn(&[Slug], &Slug, L) -> Result<M> + Clone,
+        FIndex: Fn(&[Slug], P) -> Result<Q> + Clone, // Clone to prevent recursive type
+        FLeaf: Fn(&[Slug], &Slug, P) -> Result<Q> + Clone,
     {
         let new_index = f_index(&path, self.index)?;
 
@@ -106,7 +93,6 @@ impl<I, L> Section<I, L> {
                 .collect::<Result<HashMap<_, _>>>()?
         };
         Ok(Section {
-            slug: self.slug,
             index: new_index,
             pages: new_leafs,
             sub_sections: new_subsecs,
@@ -119,31 +105,21 @@ impl<I, L> Section<I, L> {
     /// Here the context is given by
     /// - the fully qualified section path (i.e. the sequence of [`Slug`]s) of this [`Section`] for this [`Section`]'s index page, as well as
     /// - the fully qualified section path alongside the respective page [`Slug`] for all leaf pages contained in this [`Section`].
-    pub fn try_walk<J, M, FIndex, FLeaf>(
-        self,
-        f_index: FIndex,
-        f_leaf: FLeaf,
-    ) -> Result<Section<J, M>>
+    pub fn try_walk<Q, FIndex, FLeaf>(self, f_index: FIndex, f_leaf: FLeaf) -> Result<Section<Q>>
     where
-        FIndex: Fn(&[Slug], I) -> Result<J> + Clone, // Clone to prevent recursive type
-        FLeaf: Fn(&[Slug], &Slug, L) -> Result<M> + Clone,
+        FIndex: Fn(&[Slug], P) -> Result<Q> + Clone, // Clone to prevent recursive type
+        FLeaf: Fn(&[Slug], &Slug, P) -> Result<Q> + Clone,
     {
         self.try_walk_helper(Vec::new(), f_index, f_leaf)
     }
-
-    pub fn slug(&self) -> &Slug {
-        &self.slug
-    }
 }
 
-impl<I, L> Section<I, L>
+impl<P> Section<P>
 where
-    for<'a> &'a I: IntoValue,
-    for<'b> &'b L: IntoValue,
+    for<'a> &'a P: IntoValue,
 {
     pub fn to_typst(&self) -> Dict {
         let Self {
-            slug: _,
             index,
             pages,
             sub_sections,
@@ -167,10 +143,9 @@ where
     }
 }
 
-impl<I, L> IntoValue for &'_ Section<I, L>
+impl<P> IntoValue for &'_ Section<P>
 where
-    for<'a> &'a I: IntoValue,
-    for<'b> &'b L: IntoValue,
+    for<'a> &'a P: IntoValue,
 {
     fn into_value(self) -> Value {
         Value::Dict(self.to_typst())

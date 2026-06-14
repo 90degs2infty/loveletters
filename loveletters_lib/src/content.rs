@@ -3,15 +3,14 @@ use time::{Date, PrimitiveDateTime, Time};
 use typst::foundations::{Datetime, Dict, IntoValue, Value};
 
 // TODO: dedicated module?
-// TODO: should (maybe) be empty instead - how to tell serde?
 #[derive(Debug, Deserialize, Serialize)]
-pub struct IndexFrontmatter {
+pub struct Frontmatter {
     title: String,
     publication: Date,
     // TODO expiry: OffsetDateTime,
 }
 
-impl IndexFrontmatter {
+impl Frontmatter {
     pub fn to_typst(&self) -> Value {
         let Self { title, publication } = self;
 
@@ -19,6 +18,7 @@ impl IndexFrontmatter {
         d.insert("title".into(), Value::Str(title.as_str().into()));
         d.insert(
             "publication".into(),
+            // TODO should be a date only
             Value::Datetime(Datetime::Datetime(PrimitiveDateTime::new(
                 *publication,
                 Time::MIDNIGHT,
@@ -28,37 +28,7 @@ impl IndexFrontmatter {
     }
 }
 
-impl IntoValue for &IndexFrontmatter {
-    fn into_value(self) -> Value {
-        self.to_typst()
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct LeafFrontmatter {
-    title: String,
-    publication: Date,
-    // TODO expiry: OffsetDateTime,
-}
-
-impl LeafFrontmatter {
-    pub fn to_typst(&self) -> Value {
-        let Self { title, publication } = self;
-
-        let mut d = Dict::new();
-        d.insert("title".into(), Value::Str(title.as_str().into()));
-        d.insert(
-            "publication".into(),
-            Value::Datetime(Datetime::Datetime(PrimitiveDateTime::new(
-                *publication,
-                Time::MIDNIGHT,
-            ))),
-        );
-        Value::Dict(d)
-    }
-}
-
-impl IntoValue for &LeafFrontmatter {
+impl IntoValue for &Frontmatter {
     fn into_value(self) -> Value {
         self.to_typst()
     }
@@ -72,7 +42,7 @@ mod tests {
     use proptest::prelude::Strategy;
     use test_strategy::proptest;
 
-    use crate::content::{IndexFrontmatter, LeafFrontmatter};
+    use crate::content::Frontmatter;
 
     // TODO do these unit tests serve any purpose? These are more testing serde/toml than
     // anything else...
@@ -85,7 +55,7 @@ mod tests {
         mock: MockFrontmatter,
     ) {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
-        let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
+        let res: Result<Frontmatter, _> = toml::from_str(&toml);
         try_match!(res, Ok(_))?;
     }
 
@@ -97,7 +67,7 @@ mod tests {
         mock: MockFrontmatter,
     ) {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
-        let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
+        let res: Result<Frontmatter, _> = toml::from_str(&toml);
 
         try_match!(res, Err(_))?;
     }
@@ -110,7 +80,7 @@ mod tests {
         mock: MockFrontmatter,
     ) {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
-        let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
+        let res: Result<Frontmatter, _> = toml::from_str(&toml);
 
         try_match!(res, Err(_))?;
     }
@@ -123,7 +93,7 @@ mod tests {
         mock: MockFrontmatter,
     ) {
         let toml = mock.try_to_toml().expect("mock should deserialize to toml");
-        let res: Result<LeafFrontmatter, _> = toml::from_str(&toml);
+        let res: Result<Frontmatter, _> = toml::from_str(&toml);
 
         try_match!(res, Err(_))?;
     }
@@ -136,7 +106,7 @@ mod tests {
         mock: MockFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
-        let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
+        let res: Result<Frontmatter, _> = toml::from_str(&toml);
         try_match!(res, Ok(_))?;
     }
 
@@ -148,7 +118,7 @@ mod tests {
         mock: MockFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
-        let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
+        let res: Result<Frontmatter, _> = toml::from_str(&toml);
 
         try_match!(res, Err(_))?;
     }
@@ -161,7 +131,7 @@ mod tests {
         mock: MockFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
-        let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
+        let res: Result<Frontmatter, _> = toml::from_str(&toml);
 
         try_match!(res, Err(_))?;
     }
@@ -174,7 +144,7 @@ mod tests {
         mock: MockFrontmatter,
     ) {
         let toml = toml::to_string(&mock).expect("mock should deserialize to toml");
-        let res: Result<IndexFrontmatter, _> = toml::from_str(&toml);
+        let res: Result<Frontmatter, _> = toml::from_str(&toml);
 
         try_match!(res, Err(_))?;
     }

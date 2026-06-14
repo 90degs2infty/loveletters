@@ -22,5 +22,5 @@ struct Args {
 async fn main() -> Result<()> {
     let args = Args::parse();
 
-    render_dir(args.input_dir, args.output_dir)
+    render_dir(args.input_dir, args.output_dir).await
 }

@@ -1,12 +1,12 @@
-use std::{fs, marker::PhantomData, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use serde::Deserialize;
 use typst::foundations::{Dict, IntoValue, Value};
 
 use crate::{
+    constants::{FRONTMATTER_FILEEXT, PAGE_FILESTEM},
     discovery::DiscoveredPage,
     error::{Error, Result},
-    page::Mode,
     rendering::{RenderedPage, Renderer, context::PageContext},
     section::Section,
 };
@@ -17,19 +17,18 @@ use crate::{
 // (yet to implement) convenience accessor to page-local context (the one accessible via e.g.
 // `#loveletters.page` or similar).
 
-pub struct PageWithFrontmatter<M, F> {
+// TODO get rid of generic parameter, use Frontmatter directly instead
+pub struct PageWithFrontmatter<F> {
     content_dir: PathBuf,
     frontmatter: F,
-    m: PhantomData<M>,
 }
 
-impl<M, F> PageWithFrontmatter<M, F>
+impl<F> PageWithFrontmatter<F>
 where
-    M: Mode,
     F: for<'de> Deserialize<'de>,
 {
     pub fn try_parse(dir: PathBuf) -> Result<Self> {
-        let frontmatter_file = dir.join(M::frontmatter_filename());
+        let frontmatter_file = dir.join(PAGE_FILESTEM).with_extension(FRONTMATTER_FILEEXT);
         let frontmatter: String =
             fs::read_to_string(&frontmatter_file).map_err(|e| Error::FileIO {
                 path: Some(frontmatter_file.clone()),
@@ -40,21 +39,17 @@ where
         Ok(Self {
             content_dir: dir,
             frontmatter,
-            m: PhantomData,
         })
     }
 }
 
-impl<M, F> PageWithFrontmatter<M, F> {
-    pub fn try_render(self, renderer: &Renderer, ctx: PageContext) -> Result<RenderedPage<M>>
-    where
-        M: Mode,
-    {
+impl<F> PageWithFrontmatter<F> {
+    pub fn try_render(self, renderer: &Renderer, ctx: PageContext) -> Result<RenderedPage> {
         renderer.try_render_dir(self.content_dir, ctx)
     }
 }
 
-impl<M, F> IntoValue for &PageWithFrontmatter<M, F>
+impl<F> IntoValue for &PageWithFrontmatter<F>
 where
     for<'b> &'b F: IntoValue,
 {
@@ -62,7 +57,6 @@ where
         let PageWithFrontmatter {
             content_dir: _,
             frontmatter,
-            m: _,
         } = self;
 
         let mut d = Dict::new();
@@ -73,17 +67,12 @@ where
 
 // For the moment, this function does not require access to any state.
 // In case this changes in the future, make it a method of some `Parser` type.
-pub fn try_parse<MIndex, MLeaf, FIndex, FLeaf>(
-    section: Section<DiscoveredPage<MIndex>, DiscoveredPage<MLeaf>>,
-) -> Result<Section<PageWithFrontmatter<MIndex, FIndex>, PageWithFrontmatter<MLeaf, FLeaf>>>
+pub fn try_parse<F>(section: Section<DiscoveredPage>) -> Result<Section<PageWithFrontmatter<F>>>
 where
-    MIndex: Mode,
-    MLeaf: Mode,
-    FIndex: for<'de> Deserialize<'de>,
-    FLeaf: for<'de> Deserialize<'de>,
+    F: for<'de> Deserialize<'de>,
 {
     section.try_map(
-        DiscoveredPage::<MIndex>::try_parse::<FIndex>,
-        DiscoveredPage::<MLeaf>::try_parse::<FLeaf>,
+        DiscoveredPage::try_parse::<F>,
+        DiscoveredPage::try_parse::<F>,
     )
 }

@@ -7,7 +7,6 @@ use bytes::Bytes;
 
 use crate::{
     error::{Error, Result},
-    page::{Index, Leaf},
     rendering::RenderedPage,
     section::Section,
     utils::ensure_exists,
@@ -58,10 +57,7 @@ impl Bundler {
         Self { output_dir }
     }
 
-    pub fn try_bundle(
-        &self,
-        content: Section<RenderedPage<Index>, RenderedPage<Leaf>>,
-    ) -> Result<()> {
+    pub fn try_bundle(&self, content: Section<RenderedPage>) -> Result<()> {
         let output_dir = self.output_dir.clone();
         let _ = content.try_walk(
             |section, rendering| {

@@ -2,13 +2,12 @@
 
 mod bundleing;
 mod config;
+mod constants;
 mod content;
 mod discovery;
 pub mod error;
 mod frontmatter_parsing;
-mod page;
 mod rendering;
-pub(crate) mod seal;
 mod section;
 mod slug;
 mod utils;
