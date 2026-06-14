@@ -1,5 +1,7 @@
 //! Helper to represent pattern match failures.
 
+use std::{error::Error, fmt};
+
 /// An unexpected value not matching a certain pattern.
 #[derive(Debug)]
 pub struct Mismatch<T> {
@@ -7,17 +9,17 @@ pub struct Mismatch<T> {
     pattern: String,
 }
 
-impl<T> std::fmt::Display for Mismatch<T>
+impl<T> fmt::Display for Mismatch<T>
 where
-    T: std::fmt::Debug,
+    T: fmt::Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let Self { inner, pattern } = self;
-        write!(f, "value {:?} did not match pattern {}", inner, pattern)
+        write!(f, "value {inner:?} did not match pattern {pattern}")
     }
 }
 
-impl<T> std::error::Error for Mismatch<T> where T: std::fmt::Debug {}
+impl<T> Error for Mismatch<T> where T: fmt::Debug {}
 
 impl<T> Mismatch<T> {
     /// Create a new [`Mismatch`] value indicating `value` does not match `pattern`.

@@ -11,11 +11,13 @@ pub struct Filename {
 
 impl Filename {
     /// This [`Filename`]'s stem component.
+    #[must_use]
     pub fn stem(&self) -> &str {
         &self.stem
     }
 
     /// This [`Filename`]'s extension component.
+    #[must_use]
     pub fn ext(&self) -> &str {
         &self.ext
     }

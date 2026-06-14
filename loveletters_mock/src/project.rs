@@ -6,7 +6,10 @@ use proptest::prelude::*;
 use proptest_ext::transpose::Transpose;
 use serde::Serialize;
 use std::path::Path;
-use tokio::{fs::File, io::AsyncWriteExt};
+use tokio::{
+    fs::{self, File},
+    io::AsyncWriteExt,
+};
 use url::Url;
 
 use crate::{
@@ -18,10 +21,9 @@ fn prop_valid_url() -> impl Strategy<Value = Url> {
     // at least foo.bar with optional leading subdomains and optional trailing paths (paths can end
     // on / or not)
     "https?://([a-z0-9]+\\.)+[a-z]+(/[a-z0-9]+)*/?".prop_map(|raw| {
-        Url::parse(&raw).expect(&format!(
-            "regex should generate valid Url, but yielded {}",
-            &raw
-        ))
+        Url::parse(&raw).unwrap_or_else(|e| {
+            panic!("regex should generate valid Url, but yielded {raw}, resulting in {e}")
+        })
     })
 }
 
@@ -63,6 +65,7 @@ pub struct Config {
 
 impl Config {
     /// Create a new [`ConfigStrategyBuilder`] to configure the generation of [`Config`]s.
+    #[must_use]
     pub fn builder() -> ConfigStrategyBuilder {
         ConfigStrategyBuilder::valid()
     }
@@ -124,6 +127,7 @@ pub struct ConfigStrategyBuilder {
 
 impl ConfigStrategyBuilder {
     /// Initialize generation of valid [`Config`]s.
+    #[must_use]
     pub fn valid() -> Self {
         Self {
             title: Title::prop_valid().into_correct().boxed(),
@@ -213,6 +217,7 @@ pub struct Project {
 
 impl Project {
     /// Create a new [`ProjectStrategyBuilder`] to configure the generation of [`Project`]s.
+    #[must_use]
     pub fn builder() -> ProjectStrategyBuilder {
         ProjectStrategyBuilder::empty()
     }
@@ -245,7 +250,7 @@ impl Project {
         let content_dir = dir.join("content");
 
         if content.is_some() || *enforce_content_dir {
-            tokio::fs::create_dir(&content_dir).await.with_context(|| {
+            fs::create_dir(&content_dir).await.with_context(|| {
                 format!(
                     "while creating a project's content directory at '{}'",
                     content_dir.display()
@@ -280,6 +285,7 @@ pub struct ProjectStrategyBuilder {
 
 impl ProjectStrategyBuilder {
     /// Initialize creation of empty [`Project`]s.
+    #[must_use]
     pub fn empty() -> Self {
         Self {
             config: Some(ConfigStrategyBuilder::valid()),
@@ -295,6 +301,7 @@ impl ProjectStrategyBuilder {
     }
 
     /// Get access to the generated [`Project`]'s configuration filename.
+    #[must_use]
     pub fn config_filename(&self) -> &FilenameStrategyBuilder {
         &self.config_filename
     }

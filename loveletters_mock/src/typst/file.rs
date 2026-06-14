@@ -2,7 +2,7 @@
 
 use anyhow::{Context, Result};
 use proptest::prelude::*;
-use std::{path::Path, sync::Arc};
+use std::{path::Path, rc::Rc, sync::Arc};
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
 
@@ -26,7 +26,7 @@ impl TypstSourceFile {
         })?);
         for snippet in self.content.iter() {
             let _ = file
-                .write(snippet.as_string().as_bytes())
+                .write(snippet.as_str().as_bytes())
                 .await
                 .with_context(|| {
                     format!(
@@ -48,26 +48,28 @@ impl TypstSourceFile {
 
 /// Builder to configure [`Strategy`]s generating [`TypstSourceFile`]s.
 pub struct StrategyBuilder {
-    content: Arc<Vec<BoxedStrategy<Snippet>>>,
+    // BoxedStrategy is neither Send nor Sync, so no need to pay for the atomicity of an Arc in here.
+    content: Rc<Vec<BoxedStrategy<Snippet>>>,
 }
 
 impl StrategyBuilder {
     /// Initialize generation of empty source file.
+    #[must_use]
     pub fn empty() -> Self {
         Self {
-            content: Arc::new(Vec::new()),
+            content: Rc::new(Vec::new()),
         }
     }
 
     /// Append the specified snippet to the generated source files.
     pub fn push_snippet(&mut self, snippet: impl Strategy<Value = Snippet> + 'static) -> &mut Self {
-        Arc::make_mut(&mut self.content).push(snippet.boxed());
+        Rc::make_mut(&mut self.content).push(snippet.boxed());
         self
     }
 
     /// Append the specified snippets to the generated source files.
     pub fn push_snippets(&mut self, snippets: &[BoxedStrategy<Snippet>]) -> &mut Self {
-        Arc::make_mut(&mut self.content).extend_from_slice(snippets);
+        Rc::make_mut(&mut self.content).extend_from_slice(snippets);
         self
     }
 

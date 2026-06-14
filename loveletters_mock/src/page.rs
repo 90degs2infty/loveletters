@@ -50,6 +50,7 @@ pub struct Frontmatter {
 
 impl Frontmatter {
     /// Create a new [`FrontmatterStrategyBuilder`] to configure the generation of [`Frontmatter`]s.
+    #[must_use]
     pub fn builder() -> FrontmatterStrategyBuilder {
         FrontmatterStrategyBuilder::valid()
     }
@@ -97,6 +98,8 @@ pub struct FrontmatterStrategyBuilder {
 
 impl FrontmatterStrategyBuilder {
     /// Initialize generation of valid [`Frontmatter`]s.
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn valid() -> Self {
         Self {
             publication: (UtcDateTime::MIN.unix_timestamp()..=UtcDateTime::MAX.unix_timestamp())
@@ -158,6 +161,7 @@ pub struct Page {
 
 impl Page {
     /// Create a new [`PageStrategyBuilder`] to configure the generation of [`Page`]s.
+    #[must_use]
     pub fn builder() -> PageStrategyBuilder {
         PageStrategyBuilder::valid()
     }
@@ -206,6 +210,7 @@ pub struct PageStrategyBuilder {
 
 impl PageStrategyBuilder {
     /// Initialize generation of valid [`Page`]s.
+    #[must_use]
     pub fn valid() -> Self {
         Self {
             frontmatter: Some(FrontmatterStrategyBuilder::valid()),
@@ -216,11 +221,13 @@ impl PageStrategyBuilder {
     }
 
     /// Wrap [`Page`]s as configured by this [`PageStrategyBuilder`] in single-paged sections.
+    #[must_use]
     pub fn wrap_in_section(self) -> SectionStrategyBuilder {
         SectionStrategyBuilder::wrap(self)
     }
 
     /// Get access to the generated [`Page`]'s frontmatter configuration, if any.
+    #[must_use]
     pub fn frontmatter(&self) -> Option<&FrontmatterStrategyBuilder> {
         self.frontmatter.as_ref()
     }
@@ -231,6 +238,7 @@ impl PageStrategyBuilder {
     }
 
     /// Get access to the generated [`Page`]'s frontmatter configuration filename.
+    #[must_use]
     pub fn frontmatter_filename(&self) -> &FilenameStrategyBuilder {
         &self.frontmatter_filename
     }
@@ -241,6 +249,7 @@ impl PageStrategyBuilder {
     }
 
     /// Get access to the generated [`Page`]'s typst content, if any.
+    #[must_use]
     pub fn content(&self) -> Option<&TypstStrategyBuilder> {
         self.content.as_ref()
     }
@@ -251,6 +260,7 @@ impl PageStrategyBuilder {
     }
 
     /// Get access to the generated [`Page`]'s typst source filename.
+    #[must_use]
     pub fn typst_filename(&self) -> &FilenameStrategyBuilder {
         &self.typst_filename
     }

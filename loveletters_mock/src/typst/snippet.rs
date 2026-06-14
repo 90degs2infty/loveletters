@@ -8,12 +8,8 @@ pub struct Snippet(String);
 
 impl Snippet {
     /// The raw source code snippet.
+    #[must_use]
     pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    /// The raw source code snippet.
-    pub fn as_string(&self) -> &String {
         &self.0
     }
 }
