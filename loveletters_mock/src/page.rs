@@ -154,8 +154,17 @@ impl FrontmatterStrategyBuilder {
     }
 }
 
+/// Flag indicating how to verify a page's output bundle.
+///
+/// When verifying an index page's output bundle, we cannot assume all direct filesystem children to
+/// belong to the given page. Instead, the parent's leaf pages will reside as directories within the
+/// output bundle directory as well. In contrast, when verifying a leaf page's output bundle, all
+/// direct filesystem children have to belong to the given page - otherwise the output bundle is
+/// corrupted. [`VerificationMode`] distinguishes the two cases.
 pub enum VerificationMode {
+    /// Verify an index page's output bundle
     IndexPage,
+    /// Verify a leaf page's output bundle
     LeafPage,
 }
 
@@ -264,6 +273,7 @@ impl Page {
         Ok(())
     }
 
+    #[must_use]
     pub fn is_expected_filesystem_child(&self, child: &str) -> bool {
         child == "index.html"
     }
