@@ -5,7 +5,7 @@ use lattice::{IntoCorrect, Site, So};
 use proptest::prelude::*;
 use proptest_ext::transpose::Transpose;
 use serde::Serialize;
-use std::{collections::HashSet, path::Path};
+use std::{ffi::OsStr, path::Path};
 use time::{Date, UtcDateTime, serde::format_description};
 use tokio::{
     fs::{self, File},
@@ -224,15 +224,16 @@ impl Page {
                         dir.display()
                     )
                 })?;
-                let suffix = entry.path().file_name().with_context(|| {
-                    format!(
-                        "while getting the last component from '{}'",
-                        entry.path().display()
-                    )
-                })?;
-                let suffix = suffix
-                    .to_str()
-                    .with_context(|| format!("while converting '{}' to UTF-8", suffix.display()))?;
+                let suffix = entry
+                    .path()
+                    .file_name()
+                    .and_then(OsStr::to_str)
+                    .with_context(|| {
+                        format!(
+                            "while converting the last component from '{}' to UTF-8",
+                            entry.path().display()
+                        )
+                    })?;
 
                 let expected = self.is_expected_filesystem_child(suffix);
 

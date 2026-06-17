@@ -9,12 +9,12 @@ use proptest::{
 use proptest_ext::transpose::Transpose;
 use std::{
     borrow::Borrow,
-    collections::{HashMap, HashSet, hash_map::Keys},
+    collections::{HashMap, HashSet},
+    ffi::OsStr,
     hash::{self},
     path::Path,
     sync::Arc,
 };
-use time::Month::October;
 use tokio::fs;
 use tokio_stream::StreamExt;
 use walkdir::WalkDir;
@@ -183,15 +183,16 @@ impl Section {
                     dir.display()
                 )
             })?;
-            let suffix = entry.path().file_name().with_context(|| {
-                format!(
-                    "while getting the last component from '{}'",
-                    entry.path().display()
-                )
-            })?;
-            let suffix = suffix
-                .to_str()
-                .with_context(|| format!("while converting '{}' to UTF-8", suffix.display()))?;
+            let suffix = entry
+                .path()
+                .file_name()
+                .and_then(OsStr::to_str)
+                .with_context(|| {
+                    format!(
+                        "while converting the last component from '{}' to UTF-8",
+                        entry.path().display()
+                    )
+                })?;
 
             let expected = index.is_expected_filesystem_child(suffix)
                 || self.pages.contains_key(suffix)
