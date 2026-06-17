@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    io::ErrorKind,
+    io::{self, ErrorKind},
     path::{Path, PathBuf},
 };
 
@@ -15,7 +15,7 @@ use tokio::fs::try_exists;
 use tokio_stream::StreamExt;
 use walkdir::{DirEntry, WalkDir};
 
-static RESERVED_DIRS: [&str; 4] = ["_index", "posts", "static", "assets"];
+const RESERVED_DIRS: [&str; 4] = ["_index", "posts", "static", "assets"];
 
 pub struct Discoverer {}
 
@@ -26,7 +26,7 @@ impl Discoverer {
         // improves error messages in the "ordinary" case, so we accept this risk.
         if !try_exists(&content_dir)
             .await
-            .map_err(|e: std::io::Error| Error::FileIO {
+            .map_err(|e: io::Error| Error::FileIO {
                 path: Some(content_dir.to_path_buf()),
                 raw: e,
             })?
@@ -102,7 +102,7 @@ impl Discoverer {
                 Err(e) => {
                     return Err(e);
                 }
-            };
+            }
         }
 
         Ok(Section::new(index_page, pages, subsections))
@@ -113,7 +113,7 @@ impl Discoverer {
 
         if try_exists(&frontmatter_path)
             .await
-            .map_err(|e: std::io::Error| Error::FileIO {
+            .map_err(|e: io::Error| Error::FileIO {
                 path: Some(frontmatter_path.clone()),
                 raw: e,
             })?
