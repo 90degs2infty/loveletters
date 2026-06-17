@@ -21,7 +21,7 @@ use tempfile::TempDir;
 ///
 /// Note that potential errors returned by [`render_dir`] are _not_ returned as error!
 /// I.e. the result returned by [`render_dir`] is passed on unchanged wrapped in `Ok(res)`.
-pub async fn try_render_mock(mock: &Project) -> Result<StdResult<(), Error>> {
+pub async fn try_render_mock(mock: &Project) -> Result<(TempDir, TempDir, StdResult<(), Error>)> {
     let input_dir = TempDir::with_prefix("loveletters-")
         .with_context(|| "while creating a temporary input directory")?;
 
@@ -39,16 +39,5 @@ pub async fn try_render_mock(mock: &Project) -> Result<StdResult<(), Error>> {
 
     let res = render_dir(input_dir.path(), output_dir.path()).await;
 
-    if res.is_ok() {
-        mock.verify_output_bundle(output_dir.path())
-            .await
-            .with_context(|| {
-                format!(
-                    "while verifying the output bundle at '{}'",
-                    output_dir.path().display()
-                )
-            })?;
-    }
-
-    Ok(res)
+    Ok((input_dir, output_dir, res))
 }

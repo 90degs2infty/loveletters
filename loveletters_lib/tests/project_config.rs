@@ -17,7 +17,7 @@ async fn project_requires_config(
     )]
     mock: Project,
 ) {
-    let res = try_render_mock(&mock).await.into_proptest()?;
+    let (_, _, res) = try_render_mock(&mock).await.into_proptest()?;
 
     try_match!(
         res,
@@ -39,7 +39,7 @@ async fn project_config_requires_loveletters_filestem(
     )]
     mock: Project,
 ) {
-    let res = try_render_mock(&mock).await.into_proptest()?;
+    let (_, _, res) = try_render_mock(&mock).await.into_proptest()?;
 
     try_match!(
         res,
@@ -61,7 +61,7 @@ async fn project_config_requires_toml_fileext(
     )]
     mock: Project,
 ) {
-    let res = try_render_mock(&mock).await.into_proptest()?;
+    let (_, _, res) = try_render_mock(&mock).await.into_proptest()?;
 
     try_match!(
         res,
@@ -83,7 +83,7 @@ async fn project_config_requires_title(
     )]
     mock: Project,
 ) {
-    let res = try_render_mock(&mock).await.into_proptest()?;
+    let (_, _, res) = try_render_mock(&mock).await.into_proptest()?;
 
     try_match!(
         res,
@@ -105,7 +105,7 @@ async fn project_config_requires_author(
     )]
     mock: Project,
 ) {
-    let res = try_render_mock(&mock).await.into_proptest()?;
+    let (_, _, res) = try_render_mock(&mock).await.into_proptest()?;
 
     try_match!(
         res,
@@ -127,7 +127,7 @@ async fn project_config_requires_root(
     )]
     mock: Project,
 ) {
-    let res = try_render_mock(&mock).await.into_proptest()?;
+    let (_, _, res) = try_render_mock(&mock).await.into_proptest()?;
 
     try_match!(
         res,
@@ -149,7 +149,7 @@ async fn project_config_requires_valid_root(
     )]
     mock: Project,
 ) {
-    let res = try_render_mock(&mock).await.into_proptest()?;
+    let (_, _, res) = try_render_mock(&mock).await.into_proptest()?;
 
     try_match!(
         res,
@@ -171,7 +171,7 @@ async fn project_config_denies_excess_project_config_key(
     )]
     mock: Project,
 ) {
-    let res = try_render_mock(&mock).await.into_proptest()?;
+    let (_, _, res) = try_render_mock(&mock).await.into_proptest()?;
 
     try_match!(
         res,
