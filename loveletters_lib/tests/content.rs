@@ -53,7 +53,10 @@ async fn project_requires_nonempty_content_dir(
     )?;
 }
 
-#[proptest(async = "tokio")]
+// This test is very slow, unfortunately. For the moment we thus drastically reduce the
+// number of cases. Once at some point we can test content discovery and rendering
+// independently, we might increase the number of test cases again back to the default.
+#[proptest(async = "tokio", cases = 4)]
 async fn render_dir_accepts_arbitrary_project_structure(
     #[strategy(
         {
@@ -61,7 +64,7 @@ async fn render_dir_accepts_arbitrary_project_structure(
             page.content_mut().expect("page should have content").push_snippet(SnippetKind::Lorem.into_strategy());
 
             let mut project = ProjectStrategyBuilder::empty();
-            project.content_mut().expect("project should have content").draw_pages(page, 0..5).recurse(3, 4, 2);
+            project.content_mut().expect("project should have content").draw_pages(page, 0..3).recurse(3, 4, 2);
             project.build()
         }
     )]
